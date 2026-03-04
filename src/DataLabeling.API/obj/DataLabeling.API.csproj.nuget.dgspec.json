@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.API\\DataLabeling.API.csproj": {}
+    "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.API\\DataLabeling.API.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.API\\DataLabeling.API.csproj": {
+    "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.API\\DataLabeling.API.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.API\\DataLabeling.API.csproj",
+        "projectUniqueName": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.API\\DataLabeling.API.csproj",
         "projectName": "DataLabeling.API",
-        "projectPath": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.API\\DataLabeling.API.csproj",
-        "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.API\\obj\\",
+        "projectPath": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.API\\DataLabeling.API.csproj",
+        "packagesPath": "C:\\Users\\khang.ngo\\.nuget\\packages\\",
+        "outputPath": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.API\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\Admin\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\khang.ngo\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -32,8 +32,14 @@
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.BLL\\DataLabeling.BLL.csproj": {
-                "projectPath": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.BLL\\DataLabeling.BLL.csproj"
+              "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.BLL\\DataLabeling.BLL.csproj": {
+                "projectPath": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.BLL\\DataLabeling.BLL.csproj"
+              },
+              "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.DAL\\DataLabeling.DAL.csproj": {
+                "projectPath": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.DAL\\DataLabeling.DAL.csproj"
+              },
+              "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj": {
+                "projectPath": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj"
               }
             }
           }
@@ -54,9 +60,23 @@
         "net9.0": {
           "targetAlias": "net9.0",
           "dependencies": {
-            "Microsoft.AspNetCore.OpenApi": {
+            "BCrypt.Net-Next": {
+              "target": "Package",
+              "version": "[4.1.0, )"
+            },
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
               "target": "Package",
               "version": "[9.0.6, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[6.6.2, )"
             }
           },
           "imports": [
@@ -78,24 +98,24 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.308/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.BLL\\DataLabeling.BLL.csproj": {
+    "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.BLL\\DataLabeling.BLL.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.BLL\\DataLabeling.BLL.csproj",
+        "projectUniqueName": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.BLL\\DataLabeling.BLL.csproj",
         "projectName": "DataLabeling.BLL",
-        "projectPath": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.BLL\\DataLabeling.BLL.csproj",
-        "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.BLL\\obj\\",
+        "projectPath": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.BLL\\DataLabeling.BLL.csproj",
+        "packagesPath": "C:\\Users\\khang.ngo\\.nuget\\packages\\",
+        "outputPath": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.BLL\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\Admin\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\khang.ngo\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -110,11 +130,11 @@
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.DAL\\DataLabeling.DAL.csproj": {
-                "projectPath": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.DAL\\DataLabeling.DAL.csproj"
+              "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.DAL\\DataLabeling.DAL.csproj": {
+                "projectPath": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.DAL\\DataLabeling.DAL.csproj"
               },
-              "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj": {
-                "projectPath": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj"
+              "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj": {
+                "projectPath": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj"
               }
             }
           }
@@ -150,24 +170,24 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.308/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.DAL\\DataLabeling.DAL.csproj": {
+    "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.DAL\\DataLabeling.DAL.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.DAL\\DataLabeling.DAL.csproj",
+        "projectUniqueName": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.DAL\\DataLabeling.DAL.csproj",
         "projectName": "DataLabeling.DAL",
-        "projectPath": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.DAL\\DataLabeling.DAL.csproj",
-        "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.DAL\\obj\\",
+        "projectPath": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.DAL\\DataLabeling.DAL.csproj",
+        "packagesPath": "C:\\Users\\khang.ngo\\.nuget\\packages\\",
+        "outputPath": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.DAL\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\Admin\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\khang.ngo\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -182,8 +202,8 @@
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj": {
-                "projectPath": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj"
+              "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj": {
+                "projectPath": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj"
               }
             }
           }
@@ -203,6 +223,16 @@
       "frameworks": {
         "net9.0": {
           "targetAlias": "net9.0",
+          "dependencies": {
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
+              "target": "Package",
+              "version": "[9.0.1, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
@@ -219,24 +249,24 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.308/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj": {
+    "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj",
+        "projectUniqueName": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj",
         "projectName": "DataLabeling.Entities",
-        "projectPath": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj",
-        "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\obj\\",
+        "projectPath": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj",
+        "packagesPath": "C:\\Users\\khang.ngo\\.nuget\\packages\\",
+        "outputPath": "D:\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\Admin\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\khang.ngo\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -284,7 +314,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.308/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

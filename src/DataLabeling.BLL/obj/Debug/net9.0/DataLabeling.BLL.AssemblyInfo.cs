@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DataLabeling.BLL")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d34c64faf7f0f34f85fa7b159ca5348b8bb8274c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+95750adcc6ccc82807fdfad46e447b38ba902694")]
 [assembly: System.Reflection.AssemblyProductAttribute("DataLabeling.BLL")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DataLabeling.BLL")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
