@@ -29,8 +29,8 @@ namespace DataLabeling.Entities
 
         public User Manager { get; set; } = null!;
 
-        public ICollection<Label> Labels { get; set; } = new List<Label>();
+        //public ICollection<Label> Labels { get; set; } = new List<Label>();
 
-        public ICollection<Dataset> Datasets { get; set; } = new List<Dataset>();
+        //public ICollection<Dataset> Datasets { get; set; } = new List<Dataset>();
     }
 }
