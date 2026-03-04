@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DataLabeling.Entities")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d34c64faf7f0f34f85fa7b159ca5348b8bb8274c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+924b7e4c1519b9323f1bac2def55dab9a8f582b4")]
 [assembly: System.Reflection.AssemblyProductAttribute("DataLabeling.Entities")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DataLabeling.Entities")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
