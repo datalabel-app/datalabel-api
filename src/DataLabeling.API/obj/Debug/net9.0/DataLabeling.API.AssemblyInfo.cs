@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DataLabeling.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+95750adcc6ccc82807fdfad46e447b38ba902694")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+924b7e4c1519b9323f1bac2def55dab9a8f582b4")]
 [assembly: System.Reflection.AssemblyProductAttribute("DataLabeling.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DataLabeling.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

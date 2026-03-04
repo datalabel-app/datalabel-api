@@ -1,0 +1,16 @@
+D:\source\repos\datalabel-api\src\DataLabeling.DAL\bin\Debug\net9.0\DataLabeling.DAL.deps.json
+D:\source\repos\datalabel-api\src\DataLabeling.DAL\bin\Debug\net9.0\DataLabeling.DAL.dll
+D:\source\repos\datalabel-api\src\DataLabeling.DAL\bin\Debug\net9.0\DataLabeling.DAL.pdb
+D:\source\repos\datalabel-api\src\DataLabeling.DAL\bin\Debug\net9.0\DataLabeling.Entities.dll
+D:\source\repos\datalabel-api\src\DataLabeling.DAL\bin\Debug\net9.0\DataLabeling.Entities.pdb
+D:\source\repos\datalabel-api\src\DataLabeling.DAL\obj\Debug\net9.0\DataLabeling.DAL.csproj.AssemblyReference.cache
+D:\source\repos\datalabel-api\src\DataLabeling.DAL\obj\Debug\net9.0\DataLabeling.DAL.GeneratedMSBuildEditorConfig.editorconfig
+D:\source\repos\datalabel-api\src\DataLabeling.DAL\obj\Debug\net9.0\DataLabeling.DAL.AssemblyInfoInputs.cache
+D:\source\repos\datalabel-api\src\DataLabeling.DAL\obj\Debug\net9.0\DataLabeling.DAL.AssemblyInfo.cs
+D:\source\repos\datalabel-api\src\DataLabeling.DAL\obj\Debug\net9.0\DataLabeling.DAL.csproj.CoreCompileInputs.cache
+D:\source\repos\datalabel-api\src\DataLabeling.DAL\obj\Debug\net9.0\DataLabeling.DAL.sourcelink.json
+D:\source\repos\datalabel-api\src\DataLabeling.DAL\obj\Debug\net9.0\DataLabe.25042245.Up2Date
+D:\source\repos\datalabel-api\src\DataLabeling.DAL\obj\Debug\net9.0\DataLabeling.DAL.dll
+D:\source\repos\datalabel-api\src\DataLabeling.DAL\obj\Debug\net9.0\refint\DataLabeling.DAL.dll
+D:\source\repos\datalabel-api\src\DataLabeling.DAL\obj\Debug\net9.0\DataLabeling.DAL.pdb
+D:\source\repos\datalabel-api\src\DataLabeling.DAL\obj\Debug\net9.0\ref\DataLabeling.DAL.dll
