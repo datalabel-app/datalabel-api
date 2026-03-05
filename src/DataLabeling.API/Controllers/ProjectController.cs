@@ -55,5 +55,63 @@ namespace DataLabeling.API.Controllers
 
             return Ok(projects);
         }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var userId = int.Parse(
+                User.FindFirstValue(ClaimTypes.NameIdentifier)!
+            );
+
+            var project = await _context.Projects
+                .FirstOrDefaultAsync(p => p.ProjectId == id && p.ManagerId == userId);
+
+            if (project == null)
+                return NotFound("Project not found");
+
+            return Ok(project);
+        }
+
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, UpdateProjectRequest request)
+        {
+            var userId = int.Parse(
+                User.FindFirstValue(ClaimTypes.NameIdentifier)!
+            );
+
+            var project = await _context.Projects
+                .FirstOrDefaultAsync(p => p.ProjectId == id && p.ManagerId == userId);
+
+            if (project == null)
+                return NotFound("Project not found");
+
+            project.ProjectName = request.ProjectName;
+            project.Description = request.Description;
+            project.Status = request.Status;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(project);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var userId = int.Parse(
+                User.FindFirstValue(ClaimTypes.NameIdentifier)!
+            );
+
+            var project = await _context.Projects
+                .FirstOrDefaultAsync(p => p.ProjectId == id && p.ManagerId == userId);
+
+            if (project == null)
+                return NotFound("Project not found");
+
+            _context.Projects.Remove(project);
+            await _context.SaveChangesAsync();
+
+            return Ok("Deleted successfully");
+        }
     }
 }
