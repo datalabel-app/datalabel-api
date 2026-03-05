@@ -76,5 +76,44 @@ namespace DataLabeling.API.Controllers
 
             return Ok(datasets);
         }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, UpdateDatasetRequest request)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            var dataset = await _context.Datasets
+                .Include(d => d.Project)
+                .FirstOrDefaultAsync(d => d.DatasetId == id && d.Project.ManagerId == userId);
+
+            if (dataset == null)
+                return NotFound("Dataset not found");
+
+            dataset.DatasetName = request.DatasetName;
+            dataset.Status = request.Status ?? dataset.Status;
+
+            await _context.SaveChangesAsync();
+
+            return Ok("Updated successfully");
+        }
+
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            var dataset = await _context.Datasets
+                .Include(d => d.Project)
+                .FirstOrDefaultAsync(d => d.DatasetId == id && d.Project.ManagerId == userId);
+
+            if (dataset == null)
+                return NotFound("Dataset not found");
+
+            _context.Datasets.Remove(dataset);
+            await _context.SaveChangesAsync();
+
+            return Ok("Deleted successfully");
+        }
     }
 }
