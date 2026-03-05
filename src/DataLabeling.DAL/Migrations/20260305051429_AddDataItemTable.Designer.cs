@@ -3,6 +3,7 @@ using System;
 using DataLabeling.DAL.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DataLabeling.DAL.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260305051429_AddDataItemTable")]
+    partial class AddDataItemTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -206,62 +209,6 @@ namespace DataLabeling.DAL.Migrations
                     b.ToTable("projects", (string)null);
                 });
 
-            modelBuilder.Entity("DataLabeling.Entities.Task", b =>
-                {
-                    b.Property<int>("TaskId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("task_id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("TaskId"));
-
-                    b.Property<int>("AssigneeUserId")
-                        .HasColumnType("integer")
-                        .HasColumnName("assignee_user_id");
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("completed_at");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("DatasetRoundId")
-                        .HasColumnType("integer")
-                        .HasColumnName("dataset_round_id");
-
-                    b.Property<int>("GroupNumber")
-                        .HasColumnType("integer")
-                        .HasColumnName("group_number");
-
-                    b.Property<int?>("ParentTaskId")
-                        .HasColumnType("integer")
-                        .HasColumnName("parent_task_id");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("status");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("type");
-
-                    b.HasKey("TaskId");
-
-                    b.HasIndex("AssigneeUserId");
-
-                    b.HasIndex("DatasetRoundId");
-
-                    b.HasIndex("ParentTaskId");
-
-                    b.ToTable("tasks", (string)null);
-                });
-
             modelBuilder.Entity("DataLabeling.Entities.User", b =>
                 {
                     b.Property<int>("UserId")
@@ -367,42 +314,11 @@ namespace DataLabeling.DAL.Migrations
                     b.Navigation("Manager");
                 });
 
-            modelBuilder.Entity("DataLabeling.Entities.Task", b =>
-                {
-                    b.HasOne("DataLabeling.Entities.User", "AssigneeUser")
-                        .WithMany("AssignedTasks")
-                        .HasForeignKey("AssigneeUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("DataLabeling.Entities.DatasetRound", "DatasetRound")
-                        .WithMany("Tasks")
-                        .HasForeignKey("DatasetRoundId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("DataLabeling.Entities.Task", "ParentTask")
-                        .WithMany("SubTasks")
-                        .HasForeignKey("ParentTaskId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("AssigneeUser");
-
-                    b.Navigation("DatasetRound");
-
-                    b.Navigation("ParentTask");
-                });
-
             modelBuilder.Entity("DataLabeling.Entities.Dataset", b =>
                 {
                     b.Navigation("DataItems");
 
                     b.Navigation("DatasetRounds");
-                });
-
-            modelBuilder.Entity("DataLabeling.Entities.DatasetRound", b =>
-                {
-                    b.Navigation("Tasks");
                 });
 
             modelBuilder.Entity("DataLabeling.Entities.Project", b =>
@@ -412,15 +328,8 @@ namespace DataLabeling.DAL.Migrations
                     b.Navigation("Labels");
                 });
 
-            modelBuilder.Entity("DataLabeling.Entities.Task", b =>
-                {
-                    b.Navigation("SubTasks");
-                });
-
             modelBuilder.Entity("DataLabeling.Entities.User", b =>
                 {
-                    b.Navigation("AssignedTasks");
-
                     b.Navigation("Projects");
                 });
 #pragma warning restore 612, 618

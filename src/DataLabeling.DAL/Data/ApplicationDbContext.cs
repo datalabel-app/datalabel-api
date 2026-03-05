@@ -19,6 +19,8 @@ namespace DataLabeling.DAL.Data
         public DbSet<Label> Labels { get; set; }
         public DbSet<Dataset> Datasets { get; set; }
         public DbSet<DatasetRound> DatasetRounds { get; set; }
+        public DbSet<DataItem> DataItems { get; set; }
+        public DbSet<Entities.Task> Tasks{ get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -188,6 +190,92 @@ namespace DataLabeling.DAL.Data
                       .WithMany(d => d.DatasetRounds)
                       .HasForeignKey(e => e.DatasetId)
                       .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<DataItem>(entity =>
+            {
+                entity.ToTable("data_items");
+
+                entity.HasKey(e => e.ItemId);
+
+                entity.Property(e => e.ItemId)
+                    .HasColumnName("item_id");
+
+                entity.Property(e => e.DatasetId)
+                    .HasColumnName("dataset_id");
+
+                entity.Property(e => e.FileUrl)
+                    .HasColumnName("file_url")
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.Status)
+                    .HasConversion<string>()
+                    .HasMaxLength(50)
+                    .HasColumnName("status");
+
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnName("created_at");
+
+                entity.HasOne(e => e.Dataset)
+                    .WithMany(d => d.DataItems)
+                    .HasForeignKey(e => e.DatasetId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<Entities.Task>(entity =>
+            {
+                entity.ToTable("tasks");
+
+                entity.HasKey(e => e.TaskId);
+
+                entity.Property(e => e.TaskId)
+                    .HasColumnName("task_id");
+
+                entity.Property(e => e.DatasetRoundId)
+                    .HasColumnName("dataset_round_id");
+
+                entity.Property(e => e.AssigneeUserId)
+                    .HasColumnName("assignee_user_id");
+
+                entity.Property(e => e.Type)
+                    .HasConversion<string>()
+                    .HasMaxLength(50)
+                    .HasColumnName("type");
+
+                entity.Property(e => e.Status)
+                    .HasConversion<string>()
+                    .HasMaxLength(50)
+                    .HasColumnName("status");
+
+                entity.Property(e => e.GroupNumber)
+                    .HasColumnName("group_number");
+
+                entity.Property(e => e.ParentTaskId)
+                    .HasColumnName("parent_task_id");
+
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnName("created_at");
+
+                entity.Property(e => e.CompletedAt)
+                    .HasColumnName("completed_at");
+
+                // Relation: Task -> DatasetRound
+                entity.HasOne(e => e.DatasetRound)
+                    .WithMany(d => d.Tasks)
+                    .HasForeignKey(e => e.DatasetRoundId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Relation: Task -> User
+                entity.HasOne(e => e.AssigneeUser)
+                    .WithMany(u => u.AssignedTasks)
+                    .HasForeignKey(e => e.AssigneeUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Self reference (Parent Task)
+                entity.HasOne(e => e.ParentTask)
+                    .WithMany(e => e.SubTasks)
+                    .HasForeignKey(e => e.ParentTaskId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

@@ -26,6 +26,6 @@ namespace DataLabeling.Entities
 
         public ICollection<Project> Projects { get; set; } = new List<Project>();
 
-        //public ICollection<Task> AssignedTasks { get; set; } = new List<Task>();
+        public ICollection<Task> AssignedTasks { get; set; } = new List<Task>();
     }
 }
