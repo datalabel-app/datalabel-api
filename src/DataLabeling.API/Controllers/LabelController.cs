@@ -75,7 +75,50 @@ namespace DataLabeling.API.Controllers
 
             return Ok(labels);
         }
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, UpdateLabelRequest request)
+        {
+            var userId = int.Parse(
+                User.FindFirstValue(ClaimTypes.NameIdentifier)!
+            );
 
-       
+            var label = await _context.Labels
+                .Include(l => l.Project)
+                .FirstOrDefaultAsync(l => l.LabelId == id && l.Project.ManagerId == userId);
+
+            if (label == null)
+                return NotFound("Label not found");
+
+            label.LabelName = request.LabelName;
+            label.LabelType = request.LabelType;
+            label.Description = request.Description;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(label);
+        }
+
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var userId = int.Parse(
+                User.FindFirstValue(ClaimTypes.NameIdentifier)!
+            );
+
+            var label = await _context.Labels
+                .Include(l => l.Project)
+                .FirstOrDefaultAsync(l => l.LabelId == id && l.Project.ManagerId == userId);
+
+            if (label == null)
+                return NotFound("Label not found");
+
+            _context.Labels.Remove(label);
+            await _context.SaveChangesAsync();
+
+            return Ok("Deleted successfully");
+        }
+
+
     }
 }
