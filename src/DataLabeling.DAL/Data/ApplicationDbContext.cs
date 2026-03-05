@@ -16,6 +16,9 @@ namespace DataLabeling.DAL.Data
 
         public DbSet<User> Users { get; set; }
         public DbSet<Project> Projects { get; set; }
+        public DbSet<Label> Labels { get; set; }
+        public DbSet<Dataset> Datasets { get; set; }
+        public DbSet<DatasetRound> DatasetRounds { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -86,6 +89,105 @@ namespace DataLabeling.DAL.Data
 
                 entity.Property(e => e.CreatedAt)
                       .HasColumnName("created_at");
+            });
+
+            // ======================
+            // LABEL
+            // ======================
+            modelBuilder.Entity<Label>(entity =>
+            {
+                entity.ToTable("labels");
+
+                entity.HasKey(e => e.LabelId);
+
+                entity.Property(e => e.LabelId)
+                      .HasColumnName("label_id");
+
+                entity.Property(e => e.ProjectId)
+                      .HasColumnName("project_id");
+
+                entity.Property(e => e.LabelName)
+                      .HasColumnName("label_name")
+                      .HasMaxLength(255);
+
+                entity.Property(e => e.LabelType)
+                      .HasColumnName("label_type")
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.Description)
+                      .HasColumnName("description");
+
+                entity.HasOne(e => e.Project)
+                      .WithMany(p => p.Labels)
+                      .HasForeignKey(e => e.ProjectId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ======================
+            // DATASET
+            // ======================
+            modelBuilder.Entity<Dataset>(entity =>
+            {
+                entity.ToTable("datasets");
+
+                entity.HasKey(e => e.DatasetId);
+
+                entity.Property(e => e.DatasetId)
+                      .HasColumnName("dataset_id");
+
+                entity.Property(e => e.ProjectId)
+                      .HasColumnName("project_id");
+
+                entity.Property(e => e.DatasetName)
+                      .HasColumnName("dataset_name")
+                      .HasMaxLength(255);
+
+                entity.Property(e => e.Status)
+                      .HasColumnName("status")
+                      .HasMaxLength(50);
+
+                entity.Property(e => e.CreatedAt)
+                      .HasColumnName("created_at");
+
+                entity.HasOne(e => e.Project)
+                      .WithMany(p => p.Datasets)
+                      .HasForeignKey(e => e.ProjectId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ======================
+            // DATASET ROUND
+            // ======================
+            modelBuilder.Entity<DatasetRound>(entity =>
+            {
+                entity.ToTable("dataset_rounds");
+
+                entity.HasKey(e => e.DatasetRoundId);
+
+                entity.Property(e => e.DatasetRoundId)
+                      .HasColumnName("dataset_round_id");
+
+                entity.Property(e => e.DatasetId)
+                      .HasColumnName("dataset_id");
+
+                entity.Property(e => e.RoundId)
+                      .HasColumnName("round_id");
+
+                modelBuilder.Entity<DatasetRound>()
+                        .Property(e => e.Status)
+                        .HasConversion<string>()
+                        .HasMaxLength(50);
+
+                entity.Property(e => e.CreatedAt)
+                      .HasColumnName("created_at");
+
+                entity.Property(e => e.CompletedAt)
+                      .HasColumnName("completed_at");
+
+                entity.HasOne(e => e.Dataset)
+                      .WithMany(d => d.DatasetRounds)
+                      .HasForeignKey(e => e.DatasetId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

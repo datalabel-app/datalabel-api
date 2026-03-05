@@ -3,6 +3,7 @@ using System;
 using DataLabeling.DAL.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DataLabeling.DAL.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260305044817_AddDatasetTable")]
+    partial class AddDatasetTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -56,43 +59,6 @@ namespace DataLabeling.DAL.Migrations
                     b.HasIndex("ProjectId");
 
                     b.ToTable("datasets", (string)null);
-                });
-
-            modelBuilder.Entity("DataLabeling.Entities.DatasetRound", b =>
-                {
-                    b.Property<int>("DatasetRoundId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("dataset_round_id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("DatasetRoundId"));
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("completed_at");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("DatasetId")
-                        .HasColumnType("integer")
-                        .HasColumnName("dataset_id");
-
-                    b.Property<int>("RoundId")
-                        .HasColumnType("integer")
-                        .HasColumnName("round_id");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.HasKey("DatasetRoundId");
-
-                    b.HasIndex("DatasetId");
-
-                    b.ToTable("dataset_rounds", (string)null);
                 });
 
             modelBuilder.Entity("DataLabeling.Entities.Label", b =>
@@ -231,17 +197,6 @@ namespace DataLabeling.DAL.Migrations
                     b.Navigation("Project");
                 });
 
-            modelBuilder.Entity("DataLabeling.Entities.DatasetRound", b =>
-                {
-                    b.HasOne("DataLabeling.Entities.Dataset", "Dataset")
-                        .WithMany("DatasetRounds")
-                        .HasForeignKey("DatasetId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Dataset");
-                });
-
             modelBuilder.Entity("DataLabeling.Entities.Label", b =>
                 {
                     b.HasOne("DataLabeling.Entities.Project", "Project")
@@ -262,11 +217,6 @@ namespace DataLabeling.DAL.Migrations
                         .IsRequired();
 
                     b.Navigation("Manager");
-                });
-
-            modelBuilder.Entity("DataLabeling.Entities.Dataset", b =>
-                {
-                    b.Navigation("DatasetRounds");
                 });
 
             modelBuilder.Entity("DataLabeling.Entities.Project", b =>
