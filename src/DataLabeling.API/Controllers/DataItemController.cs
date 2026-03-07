@@ -90,6 +90,32 @@ namespace DataLabeling.API.Controllers
             return Ok("Deleted successfully");
         }
 
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, UpdateDataItemRequest request)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            var item = await _context.DataItems
+                .Include(i => i.Dataset)
+                .ThenInclude(d => d.Project)
+                .FirstOrDefaultAsync(i =>
+                    i.ItemId == id &&
+                    i.Dataset.Project.ManagerId == userId);
+
+            if (item == null)
+                return NotFound("DataItem not found");
+
+            if (request.FileUrl != null)
+                item.FileUrl = request.FileUrl;
+
+            if (request.Status.HasValue)
+                item.Status = request.Status.Value;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(MapToResponse(item));
+        }
+
         private static DataItemResponse MapToResponse(DataItem entity)
         {
             return new DataItemResponse
