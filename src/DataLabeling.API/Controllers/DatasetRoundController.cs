@@ -74,8 +74,19 @@ namespace DataLabeling.API.Controllers
 
             return Ok(rounds);
         }
+        private static DatasetRoundResponse MapToResponse(DatasetRound entity)
+        {
+            return new DatasetRoundResponse
+            {
+                DatasetRoundId = entity.DatasetRoundId,
+                DatasetId = entity.DatasetId,
+                RoundId = entity.RoundId,
+                Status = entity.Status,
+                CreatedAt = entity.CreatedAt,
+                CompletedAt = entity.CompletedAt
+            };
+        }
 
-      
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, UpdateDatasetRoundRequest request)
         {
@@ -126,20 +137,6 @@ namespace DataLabeling.API.Controllers
             await _context.SaveChangesAsync();
 
             return Ok("Deleted successfully");
-        }
-
-    
-        private static DatasetRoundResponse MapToResponse(DatasetRound entity)
-        {
-            return new DatasetRoundResponse
-            {
-                DatasetRoundId = entity.DatasetRoundId,
-                DatasetId = entity.DatasetId,
-                RoundId = entity.RoundId,
-                Status = entity.Status,
-                CreatedAt = entity.CreatedAt,
-                CompletedAt = entity.CompletedAt
-            };
         }
     }
 }
