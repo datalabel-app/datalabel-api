@@ -73,6 +73,66 @@ namespace DataLabeling.API.Controllers
             return Ok(tasks);
         }
 
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, UpdateTaskRequest request)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            var task = await _context.Set<DataLabeling.Entities.Task>()
+                .Include(t => t.DatasetRound)
+                .ThenInclude(r => r.Dataset)
+                .ThenInclude(d => d.Project)
+                .FirstOrDefaultAsync(t =>
+                    t.TaskId == id &&
+                    t.DatasetRound.Dataset.Project.ManagerId == userId);
+
+            if (task == null)
+                return NotFound("Task not found");
+
+            if (request.Status.HasValue)
+            {
+                task.Status = request.Status.Value;
+
+                if (task.Status == DataLabeling.Entities.TaskStatus.Completed)
+                    task.CompletedAt = DateTime.UtcNow;
+                else
+                    task.CompletedAt = null;
+            }
+
+            if (request.Type.HasValue)
+                task.Type = request.Type.Value;
+
+            if (request.GroupNumber.HasValue)
+                task.GroupNumber = request.GroupNumber.Value;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(MapToResponse(task));
+        }
+
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            var task = await _context.Set<DataLabeling.Entities.Task>()
+                .Include(t => t.DatasetRound)
+                .ThenInclude(r => r.Dataset)
+                .ThenInclude(d => d.Project)
+                .FirstOrDefaultAsync(t =>
+                    t.TaskId == id &&
+                    t.DatasetRound.Dataset.Project.ManagerId == userId);
+
+            if (task == null)
+                return NotFound("Task not found");
+
+            _context.Remove(task);
+            await _context.SaveChangesAsync();
+
+            return Ok("Deleted successfully");
+        }
+
         private static TaskResponse MapToResponse(Entities.Task entity)
         {
             return new TaskResponse
