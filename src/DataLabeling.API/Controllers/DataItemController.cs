@@ -8,7 +8,7 @@ using System.Security.Claims;
 
 namespace DataLabeling.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/dataitems")]
     [ApiController]
     public class DataItemController : ControllerBase
     {
@@ -21,49 +21,73 @@ namespace DataLabeling.API.Controllers
 
 
         [HttpPost]
-        public async Task<IActionResult> Create(CreateDataItemRequest request)
+        public async Task<IActionResult> CreateDataItem([FromBody] CreateDataItemRequest request)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-            var dataset = await _context.Datasets
-                .Include(d => d.Project)
-                .FirstOrDefaultAsync(d =>
-                    d.DatasetId == request.DatasetId &&
-                    d.Project.ManagerId == userId);
+            var dataset = await _context.Datasets.FindAsync(request.DatasetId);
 
             if (dataset == null)
-                return BadRequest("Dataset not found or not yours");
+                return BadRequest("Dataset not found");
 
-            var entity = new DataItem
+            var item = new DataItem
             {
                 DatasetId = request.DatasetId,
                 FileUrl = request.FileUrl,
-                Status = request.Status
+                Status = "Pending",
+                CreatedAt = DateTime.UtcNow
             };
 
-            _context.DataItems.Add(entity);
+            _context.DataItems.Add(item);
             await _context.SaveChangesAsync();
 
-            return Ok(MapToResponse(entity));
+            var response = new DataItemResponse
+            {
+                ItemId = item.ItemId,
+                DatasetId = item.DatasetId,
+                FileUrl = item.FileUrl,
+                Status = item.Status,
+                CreatedAt = item.CreatedAt
+            };
+
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllDataItems()
+        {
+            var items = await _context.DataItems
+                .Include(d => d.Dataset)
+                .Include(d => d.Annotator)
+                .Include(d => d.Reviewer)
+                .OrderByDescending(d => d.CreatedAt)
+                .ToListAsync();
+
+            return Ok(items);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetDataItem(int id)
+        {
+            var item = await _context.DataItems
+                .Include(d => d.Dataset)
+                .Include(d => d.Annotator)
+                .Include(d => d.Reviewer)
+                .Include(d => d.Annotations)
+                .FirstOrDefaultAsync(d => d.ItemId == id);
+
+            if (item == null)
+                return NotFound("DataItem not found");
+
+            return Ok(item);
         }
 
         [HttpGet("dataset/{datasetId}")]
         public async Task<IActionResult> GetByDataset(int datasetId)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-            var dataset = await _context.Datasets
-                .Include(d => d.Project)
-                .FirstOrDefaultAsync(d =>
-                    d.DatasetId == datasetId &&
-                    d.Project.ManagerId == userId);
-
-            if (dataset == null)
-                return BadRequest("Dataset not found or not yours");
-
             var items = await _context.DataItems
-                .Where(i => i.DatasetId == datasetId)
-                .Select(i => MapToResponse(i))
+                .Where(d => d.DatasetId == datasetId)
+                .Include(d => d.Annotator)
+                .Include(d => d.Reviewer)
+                .OrderByDescending(d => d.CreatedAt)
                 .ToListAsync();
 
             return Ok(items);
@@ -88,44 +112,6 @@ namespace DataLabeling.API.Controllers
             await _context.SaveChangesAsync();
 
             return Ok("Deleted successfully");
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, UpdateDataItemRequest request)
-        {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-            var item = await _context.DataItems
-                .Include(i => i.Dataset)
-                .ThenInclude(d => d.Project)
-                .FirstOrDefaultAsync(i =>
-                    i.ItemId == id &&
-                    i.Dataset.Project.ManagerId == userId);
-
-            if (item == null)
-                return NotFound("DataItem not found");
-
-            if (request.FileUrl != null)
-                item.FileUrl = request.FileUrl;
-
-            if (request.Status.HasValue)
-                item.Status = request.Status.Value;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(MapToResponse(item));
-        }
-
-        private static DataItemResponse MapToResponse(DataItem entity)
-        {
-            return new DataItemResponse
-            {
-                ItemId = entity.ItemId,
-                DatasetId = entity.DatasetId,
-                FileUrl = entity.FileUrl,
-                Status = entity.Status,
-                CreatedAt = entity.CreatedAt
-            };
         }
     }
 }
