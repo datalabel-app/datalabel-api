@@ -1,6 +1,7 @@
 ﻿using DataLabeling.API.DTOs;
 using DataLabeling.DAL.Data;
 using DataLabeling.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -93,17 +94,71 @@ namespace DataLabeling.API.Controllers
             return Ok(items);
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        [HttpPut("{id}/assign-annotator/{userId}")]
+        public async Task<IActionResult> AssignAnnotator(int id, int userId)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var item = await _context.DataItems.FindAsync(id);
 
+            if (item == null)
+                return NotFound("DataItem not found");
+
+            item.AnnotatorId = userId;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(item);
+        }
+
+        [HttpGet("annotator")]
+        [Authorize]
+        public async Task<IActionResult> GetMyAnnotatorItems()
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+
+            var items = await _context.DataItems
+                .Where(d => d.AnnotatorId == userId)
+                .Include(d => d.Annotator)
+                .Include(d => d.Reviewer)
+                .OrderByDescending(d => d.CreatedAt)
+                .ToListAsync();
+
+            var response = items.Select(i => new DataItemResponse
+            {
+                ItemId = i.ItemId,
+                DatasetId = i.DatasetId,
+                FileUrl = i.FileUrl,
+                AnnotatorId = i.AnnotatorId,
+                ReviewerId = i.ReviewerId,
+                Status = i.Status.ToString(),
+                CreatedAt = i.CreatedAt,
+                AnnotatorName = i.Annotator != null ? i.Annotator.FullName : null,
+                ReviewerName = i.Reviewer != null ? i.Reviewer.FullName : null
+            });
+
+            return Ok(response);
+        }
+
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] string status)
+        {
+            var item = await _context.DataItems.FindAsync(id);
+
+            if (item == null)
+                return NotFound("DataItem not found");
+
+            item.Status = status;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(item);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteDataItem(int id)
+        {
             var item = await _context.DataItems
-                .Include(i => i.Dataset)
-                .ThenInclude(d => d.Project)
-                .FirstOrDefaultAsync(i =>
-                    i.ItemId == id &&
-                    i.Dataset.Project.ManagerId == userId);
+                .Include(d => d.Annotations)
+                .FirstOrDefaultAsync(d => d.ItemId == id);
 
             if (item == null)
                 return NotFound("DataItem not found");
@@ -111,7 +166,7 @@ namespace DataLabeling.API.Controllers
             _context.DataItems.Remove(item);
             await _context.SaveChangesAsync();
 
-            return Ok("Deleted successfully");
+            return Ok("DataItem deleted");
         }
     }
 }
