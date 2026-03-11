@@ -101,6 +101,36 @@ namespace DataLabeling.API.Controllers
             return Ok(annotations);
         }
 
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateAnnotation(int id, [FromBody] Annotation request)
+        {
+            var annotation = await _context.Annotations.FindAsync(id);
+
+            if (annotation == null)
+                return NotFound("Annotation not found");
+
+            annotation.ShapeType = request.ShapeType;
+            annotation.Coordinates = request.Coordinates;
+            annotation.Classification = request.Classification;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(annotation);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteAnnotation(int id)
+        {
+            var annotation = await _context.Annotations.FindAsync(id);
+
+            if (annotation == null)
+                return NotFound("Annotation not found");
+
+            _context.Annotations.Remove(annotation);
+            await _context.SaveChangesAsync();
+
+            return Ok("Annotation deleted");
+        }
 
     }
 }
