@@ -153,6 +153,49 @@ namespace DataLabeling.API.Controllers
             return Ok(item);
         }
 
+        [HttpPut("{id}/assign-reviewer/{userId}")]
+        public async Task<IActionResult> AssignReviewer(int id, int userId)
+        {
+            var item = await _context.DataItems.FindAsync(id);
+
+            if (item == null)
+                return NotFound("DataItem not found");
+
+            item.ReviewerId = userId;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(item);
+        }
+        [HttpGet("reviewer")]
+        [Authorize]
+        public async Task<IActionResult> GetMyReviewerItems()
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+
+            var items = await _context.DataItems
+                .Where(d => d.ReviewerId == userId)
+                .Include(d => d.Annotator)
+                .Include(d => d.Reviewer)
+                .OrderByDescending(d => d.CreatedAt)
+                .ToListAsync();
+
+            var response = items.Select(i => new DataItemResponse
+            {
+                ItemId = i.ItemId,
+                DatasetId = i.DatasetId,
+                FileUrl = i.FileUrl,
+                AnnotatorId = i.AnnotatorId,
+                ReviewerId = i.ReviewerId,
+                Status = i.Status.ToString(),
+                CreatedAt = i.CreatedAt,
+                AnnotatorName = i.Annotator != null ? i.Annotator.FullName : null,
+                ReviewerName = i.Reviewer != null ? i.Reviewer.FullName : null
+            });
+
+            return Ok(response);
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDataItem(int id)
         {
