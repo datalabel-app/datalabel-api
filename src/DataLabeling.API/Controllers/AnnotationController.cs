@@ -48,7 +48,6 @@ namespace DataLabeling.API.Controllers
             return Ok(annotation);
         }
 
-      
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -62,7 +61,7 @@ namespace DataLabeling.API.Controllers
             return Ok(annotations);
         }
 
-      
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -77,7 +76,7 @@ namespace DataLabeling.API.Controllers
             return Ok(annotation);
         }
 
-      
+
         [HttpGet("item/{itemId}")]
         public async Task<IActionResult> GetByItem(int itemId)
         {
@@ -89,7 +88,7 @@ namespace DataLabeling.API.Controllers
             return Ok(annotations);
         }
 
-     
+
         [HttpGet("annotator/{userId}")]
         public async Task<IActionResult> GetByAnnotator(int userId)
         {
@@ -102,35 +101,6 @@ namespace DataLabeling.API.Controllers
             return Ok(annotations);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateAnnotation(int id, [FromBody] Annotation request)
-        {
-            var annotation = await _context.Annotations.FindAsync(id);
 
-            if (annotation == null)
-                return NotFound("Annotation not found");
-
-            annotation.ShapeType = request.ShapeType;
-            annotation.Coordinates = request.Coordinates;
-            annotation.Classification = request.Classification;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(annotation);
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteAnnotation(int id)
-        {
-            var annotation = await _context.Annotations.FindAsync(id);
-
-            if (annotation == null)
-                return NotFound("Annotation not found");
-
-            _context.Annotations.Remove(annotation);
-            await _context.SaveChangesAsync();
-
-            return Ok("Annotation deleted");
-        }
     }
 }
