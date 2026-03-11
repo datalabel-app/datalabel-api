@@ -13,16 +13,12 @@ namespace DataLabeling.Entities
         [Key]
         public int LabelId { get; set; }
 
-        [ForeignKey("Project")]
-        public int ProjectId { get; set; }
+        public int RoundId { get; set; }
 
-        [Required]
         public string LabelName { get; set; } = string.Empty;
-
-        public string? LabelType { get; set; }
 
         public string? Description { get; set; }
 
-        public Project Project { get; set; } = null!;
+        public DatasetRound Round { get; set; } = null!;
     }
 }
