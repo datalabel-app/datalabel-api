@@ -9,7 +9,7 @@ using System.Security.Claims;
 namespace DataLabeling.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/labels")]
     [Authorize]
     public class LabelController : ControllerBase
     {
@@ -48,6 +48,74 @@ namespace DataLabeling.API.Controllers
             };
 
             return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllLabels()
+        {
+            var labels = await _context.Labels
+                .Include(l => l.Round)
+                .OrderByDescending(l => l.LabelId)
+                .ToListAsync();
+
+            return Ok(labels);
+        }
+
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetLabel(int id)
+        {
+            var label = await _context.Labels
+                .Include(l => l.Round)
+                .FirstOrDefaultAsync(l => l.LabelId == id);
+
+            if (label == null)
+                return NotFound("Label not found");
+
+            return Ok(label);
+        }
+
+        [HttpGet("round/{roundId}")]
+        public async Task<IActionResult> GetLabelsByRound(int roundId)
+        {
+            var labels = await _context.Labels
+                .Where(l => l.RoundId == roundId)
+                .OrderBy(l => l.LabelName)
+                .ToListAsync();
+
+            return Ok(labels);
+        }
+
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateLabel(int id, [FromBody] Label request)
+        {
+            var label = await _context.Labels.FindAsync(id);
+
+            if (label == null)
+                return NotFound("Label not found");
+
+            label.LabelName = request.LabelName;
+            label.Description = request.Description;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(label);
+        }
+
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteLabel(int id)
+        {
+            var label = await _context.Labels.FindAsync(id);
+
+            if (label == null)
+                return NotFound("Label not found");
+
+            _context.Labels.Remove(label);
+            await _context.SaveChangesAsync();
+
+            return Ok("Label deleted");
         }
     }
 }
