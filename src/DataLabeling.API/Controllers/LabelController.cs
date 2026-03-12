@@ -9,7 +9,7 @@ using System.Security.Claims;
 namespace DataLabeling.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/labels")]
     [Authorize]
     public class LabelController : ControllerBase
     {
@@ -48,6 +48,31 @@ namespace DataLabeling.API.Controllers
             };
 
             return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllLabels()
+        {
+            var labels = await _context.Labels
+                .Include(l => l.Round)
+                .OrderByDescending(l => l.LabelId)
+                .ToListAsync();
+
+            return Ok(labels);
+        }
+
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetLabel(int id)
+        {
+            var label = await _context.Labels
+                .Include(l => l.Round)
+                .FirstOrDefaultAsync(l => l.LabelId == id);
+
+            if (label == null)
+                return NotFound("Label not found");
+
+            return Ok(label);
         }
     }
 }
