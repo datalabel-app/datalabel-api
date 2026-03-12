@@ -8,7 +8,7 @@ using System.Security.Claims;
 
 namespace DataLabeling.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/datasets")]
     [ApiController]
     public class DatasetController : ControllerBase
     {
@@ -21,91 +21,97 @@ namespace DataLabeling.API.Controllers
 
 
         [HttpPost]
-        public async Task<IActionResult> Create(CreateDatasetRequest request)
+        public async Task<IActionResult> CreateDataset([FromBody] CreateDatasetRequest request)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-            var project = await _context.Projects
-                .FirstOrDefaultAsync(p => p.ProjectId == request.ProjectId && p.ManagerId == userId);
+            var project = await _context.Projects.FindAsync(request.ProjectId);
 
             if (project == null)
-                return BadRequest("Project not found or not yours");
+                return BadRequest("Project not found");
 
             var dataset = new Dataset
             {
                 ProjectId = request.ProjectId,
                 DatasetName = request.DatasetName,
-                Status = request.Status ?? "Active"
+                Status = "Active",
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.Datasets.Add(dataset);
             await _context.SaveChangesAsync();
 
-            return Ok(new DatasetResponse
+            var response = new DatasetResponse
             {
                 DatasetId = dataset.DatasetId,
                 ProjectId = dataset.ProjectId,
                 DatasetName = dataset.DatasetName,
-                Status = dataset.Status,
-                CreatedAt = dataset.CreatedAt
-            });
+                Status = dataset.Status
+            };
+
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllDatasets()
+        {
+            var datasets = await _context.Datasets
+                .Include(d => d.Project)
+                .Include(d => d.Rounds)
+                .OrderByDescending(d => d.CreatedAt)
+                .ToListAsync();
+
+            return Ok(datasets);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetDataset(int id)
+        {
+            var dataset = await _context.Datasets
+                .Include(d => d.Project)
+                .Include(d => d.DataItems)
+                .Include(d => d.Rounds)
+                .FirstOrDefaultAsync(d => d.DatasetId == id);
+
+            if (dataset == null)
+                return NotFound("Dataset not found");
+
+            return Ok(dataset);
         }
 
         [HttpGet("project/{projectId}")]
-        public async Task<IActionResult> GetByProject(int projectId)
+        public async Task<IActionResult> GetDatasetsByProject(int projectId)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-            var project = await _context.Projects
-                .FirstOrDefaultAsync(p => p.ProjectId == projectId && p.ManagerId == userId);
-
-            if (project == null)
-                return BadRequest("Project not found or not yours");
-
             var datasets = await _context.Datasets
                 .Where(d => d.ProjectId == projectId)
-                .Select(d => new DatasetResponse
-                {
-                    DatasetId = d.DatasetId,
-                    ProjectId = d.ProjectId,
-                    DatasetName = d.DatasetName,
-                    Status = d.Status,
-                    CreatedAt = d.CreatedAt
-                })
+                .Include(d => d.Rounds)
+                .OrderByDescending(d => d.CreatedAt)
                 .ToListAsync();
 
             return Ok(datasets);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, UpdateDatasetRequest request)
+        public async Task<IActionResult> UpdateDataset(int id, [FromBody] Dataset request)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-            var dataset = await _context.Datasets
-                .Include(d => d.Project)
-                .FirstOrDefaultAsync(d => d.DatasetId == id && d.Project.ManagerId == userId);
+            var dataset = await _context.Datasets.FindAsync(id);
 
             if (dataset == null)
                 return NotFound("Dataset not found");
 
             dataset.DatasetName = request.DatasetName;
-            dataset.Status = request.Status ?? dataset.Status;
+            dataset.Status = request.Status;
 
             await _context.SaveChangesAsync();
 
-            return Ok("Updated successfully");
+            return Ok(dataset);
         }
 
-
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> DeleteDataset(int id)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
             var dataset = await _context.Datasets
-                .Include(d => d.Project)
-                .FirstOrDefaultAsync(d => d.DatasetId == id && d.Project.ManagerId == userId);
+                .Include(d => d.DataItems)
+                .Include(d => d.Rounds)
+                .FirstOrDefaultAsync(d => d.DatasetId == id);
 
             if (dataset == null)
                 return NotFound("Dataset not found");
@@ -113,7 +119,7 @@ namespace DataLabeling.API.Controllers
             _context.Datasets.Remove(dataset);
             await _context.SaveChangesAsync();
 
-            return Ok("Deleted successfully");
+            return Ok("Dataset deleted");
         }
     }
 }
