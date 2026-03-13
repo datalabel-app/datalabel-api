@@ -13,31 +13,30 @@ namespace DataLabeling.Entities
         [Key]
         public int TaskId { get; set; }
 
-        [ForeignKey("DatasetRound")]
-        public int DatasetRoundId { get; set; }
+        public int DataItemId { get; set; }
 
-        [ForeignKey("AssigneeUser")]
-        public int AssigneeUserId { get; set; }
+        public int RoundId { get; set; }
 
-        public TaskType Type { get; set; } = TaskType.Labeling;
+        public int? AnnotatorId { get; set; }
+
+        public int? ReviewerId { get; set; }
 
         public TaskStatus Status { get; set; } = TaskStatus.Pending;
 
-        public int GroupNumber { get; set; }
-
-        public int? ParentTaskId { get; set; }
-
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public DateTime? CompletedAt { get; set; }
+        public DateTime? AnnotatedAt { get; set; }
 
+        public DateTime? ReviewedAt { get; set; }
 
-        public DatasetRound DatasetRound { get; set; } = null!;
+        public DataItem DataItem { get; set; } = null!;
 
-        public User AssigneeUser { get; set; } = null!;
+        public DatasetRound Round { get; set; } = null!;
 
-        public Task? ParentTask { get; set; }
+        public User? Annotator { get; set; }
 
-        public ICollection<Task> SubTasks { get; set; } = new List<Task>();
+        public User? Reviewer { get; set; }
+
+        public ICollection<Annotation> Annotations { get; set; } = new List<Annotation>();
     }
 }
