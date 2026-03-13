@@ -64,6 +64,19 @@ namespace DataLabeling.API.Controllers
             return Ok(rounds);
         }
 
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetRound(int id)
+        {
+            var round = await _context.DatasetRounds
+                .Include(r => r.Dataset)
+                .Include(r => r.Labels)
+                .FirstOrDefaultAsync(r => r.RoundId == id);
+
+            if (round == null)
+                return NotFound("Round not found");
+
+            return Ok(round);
+        }
 
     }
 }
