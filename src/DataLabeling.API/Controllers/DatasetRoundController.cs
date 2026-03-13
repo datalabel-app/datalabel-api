@@ -77,6 +77,14 @@ namespace DataLabeling.API.Controllers
 
             return Ok(round);
         }
+        public async Task<IActionResult> GetRoundsByDataset(int datasetId)
+        {
+            var rounds = await _context.DatasetRounds
+                .Where(r => r.DatasetId == datasetId)
+                .OrderBy(r => r.RoundNumber)
+                .ToListAsync();
 
+            return Ok(rounds);
+        }
     }
 }
