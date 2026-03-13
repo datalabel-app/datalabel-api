@@ -17,19 +17,13 @@ namespace DataLabeling.Entities
 
         public string FileUrl { get; set; } = string.Empty;
 
-        public int? AnnotatorId { get; set; }
-
-        public int? ReviewerId { get; set; }
-
         public string Status { get; set; } = "Pending";
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public Dataset Dataset { get; set; } = null!;
 
-        public User? Annotator { get; set; }
-
-        public User? Reviewer { get; set; }
+        public ICollection<Task> Tasks { get; set; } = new List<Task>();
 
         public ICollection<Annotation> Annotations { get; set; } = new List<Annotation>();
     }

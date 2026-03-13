@@ -57,8 +57,8 @@ namespace DataLabeling.API.Controllers
         {
             var items = await _context.DataItems
                 .Include(d => d.Dataset)
-                .Include(d => d.Annotator)
-                .Include(d => d.Reviewer)
+                //.Include(d => d.Annotator)
+                //.Include(d => d.Reviewer)
                 .OrderByDescending(d => d.CreatedAt)
                 .ToListAsync();
 
@@ -70,8 +70,8 @@ namespace DataLabeling.API.Controllers
         {
             var item = await _context.DataItems
                 .Include(d => d.Dataset)
-                .Include(d => d.Annotator)
-                .Include(d => d.Reviewer)
+                //.Include(d => d.Annotator)
+                //.Include(d => d.Reviewer)
                 .Include(d => d.Annotations)
                 .FirstOrDefaultAsync(d => d.ItemId == id);
 
@@ -86,8 +86,8 @@ namespace DataLabeling.API.Controllers
         {
             var items = await _context.DataItems
                 .Where(d => d.DatasetId == datasetId)
-                .Include(d => d.Annotator)
-                .Include(d => d.Reviewer)
+                //.Include(d => d.Annotator)
+                //.Include(d => d.Reviewer)
                 .OrderByDescending(d => d.CreatedAt)
                 .ToListAsync();
 
@@ -102,7 +102,7 @@ namespace DataLabeling.API.Controllers
             if (item == null)
                 return NotFound("DataItem not found");
 
-            item.AnnotatorId = userId;
+            //item.AnnotatorId = userId;
 
             await _context.SaveChangesAsync();
 
@@ -116,9 +116,9 @@ namespace DataLabeling.API.Controllers
             var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
 
             var items = await _context.DataItems
-                .Where(d => d.AnnotatorId == userId)
-                .Include(d => d.Annotator)
-                .Include(d => d.Reviewer)
+                //.Where(d => d.AnnotatorId == userId)
+                //.Include(d => d.Annotator)
+                //.Include(d => d.Reviewer)
                 .OrderByDescending(d => d.CreatedAt)
                 .ToListAsync();
 
@@ -127,12 +127,12 @@ namespace DataLabeling.API.Controllers
                 ItemId = i.ItemId,
                 DatasetId = i.DatasetId,
                 FileUrl = i.FileUrl,
-                AnnotatorId = i.AnnotatorId,
-                ReviewerId = i.ReviewerId,
+                //AnnotatorId = i.AnnotatorId,
+                //ReviewerId = i.ReviewerId,
                 Status = i.Status.ToString(),
                 CreatedAt = i.CreatedAt,
-                AnnotatorName = i.Annotator != null ? i.Annotator.FullName : null,
-                ReviewerName = i.Reviewer != null ? i.Reviewer.FullName : null
+                //AnnotatorName = i.Annotator != null ? i.Annotator.FullName : null,
+                //ReviewerName = i.Reviewer != null ? i.Reviewer.FullName : null
             });
 
             return Ok(response);
@@ -161,7 +161,7 @@ namespace DataLabeling.API.Controllers
             if (item == null)
                 return NotFound("DataItem not found");
 
-            item.ReviewerId = userId;
+            //item.ReviewerId = userId;
 
             await _context.SaveChangesAsync();
 
@@ -174,9 +174,9 @@ namespace DataLabeling.API.Controllers
             var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
 
             var items = await _context.DataItems
-                .Where(d => d.ReviewerId == userId)
-                .Include(d => d.Annotator)
-                .Include(d => d.Reviewer)
+                //.Where(d => d.ReviewerId == userId)
+                //.Include(d => d.Annotator)
+                //.Include(d => d.Reviewer)
                 .OrderByDescending(d => d.CreatedAt)
                 .ToListAsync();
 
@@ -185,12 +185,12 @@ namespace DataLabeling.API.Controllers
                 ItemId = i.ItemId,
                 DatasetId = i.DatasetId,
                 FileUrl = i.FileUrl,
-                AnnotatorId = i.AnnotatorId,
-                ReviewerId = i.ReviewerId,
+                //AnnotatorId = i.AnnotatorId,
+                //ReviewerId = i.ReviewerId,
                 Status = i.Status.ToString(),
                 CreatedAt = i.CreatedAt,
-                AnnotatorName = i.Annotator != null ? i.Annotator.FullName : null,
-                ReviewerName = i.Reviewer != null ? i.Reviewer.FullName : null
+                //AnnotatorName = i.Annotator != null ? i.Annotator.FullName : null,
+                //ReviewerName = i.Reviewer != null ? i.Reviewer.FullName : null
             });
 
             return Ok(response);

@@ -21,6 +21,7 @@ namespace DataLabeling.DAL.Data
         public DbSet<DatasetRound> DatasetRounds { get; set; }
         public DbSet<DataItem> DataItems { get; set; }
         public DbSet<Annotation> Annotations { get; set; }
+        public DbSet<Entities.Task> Tasks { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -142,22 +143,6 @@ namespace DataLabeling.DAL.Data
                 entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50);
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at");
 
-                entity.Property(e => e.AnnotatorId).HasColumnName("annotator_id");
-                entity.Property(e => e.ReviewerId).HasColumnName("reviewer_id");
-
-                entity.HasOne(e => e.Dataset)
-                      .WithMany(d => d.DataItems)
-                      .HasForeignKey(e => e.DatasetId);
-
-                entity.HasOne(e => e.Annotator)
-                      .WithMany()
-                      .HasForeignKey(e => e.AnnotatorId)
-                      .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(e => e.Reviewer)
-                      .WithMany()
-                      .HasForeignKey(e => e.ReviewerId)
-                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             // ======================
@@ -183,6 +168,46 @@ namespace DataLabeling.DAL.Data
                 entity.HasOne(e => e.Label)
                       .WithMany()
                       .HasForeignKey(e => e.LabelId);
+            });
+
+            // ======================
+            // TASK
+            // ======================
+            modelBuilder.Entity<Entities.Task>(entity =>
+            {
+                entity.ToTable("tasks");
+
+                entity.HasKey(e => e.TaskId);
+
+                entity.Property(e => e.TaskId).HasColumnName("task_id");
+                entity.Property(e => e.DataItemId).HasColumnName("data_item_id");
+                entity.Property(e => e.RoundId).HasColumnName("round_id");
+                entity.Property(e => e.AnnotatorId).HasColumnName("annotator_id");
+                entity.Property(e => e.ReviewerId).HasColumnName("reviewer_id");
+                entity.Property(e => e.Status).HasColumnName("status");
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+                entity.Property(e => e.AnnotatedAt).HasColumnName("annotated_at");
+                entity.Property(e => e.ReviewedAt).HasColumnName("reviewed_at");
+
+                entity.HasOne(e => e.DataItem)
+                      .WithMany(d => d.Tasks)
+                      .HasForeignKey(e => e.DataItemId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Round)
+                      .WithMany(r => r.Tasks)
+                      .HasForeignKey(e => e.RoundId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Annotator)
+                      .WithMany()
+                      .HasForeignKey(e => e.AnnotatorId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Reviewer)
+                      .WithMany()
+                      .HasForeignKey(e => e.ReviewerId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }
