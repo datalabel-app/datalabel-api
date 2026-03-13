@@ -102,5 +102,20 @@ namespace DataLabeling.API.Controllers
 
             return Ok(round);
         }
+
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] string status)
+        {
+            var round = await _context.DatasetRounds.FindAsync(id);
+
+            if (round == null)
+                return NotFound("Round not found");
+
+            round.Status = status;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(round);
+        }
     }
 }
