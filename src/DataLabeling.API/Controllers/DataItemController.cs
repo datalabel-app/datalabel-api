@@ -20,19 +20,52 @@ namespace DataLabeling.API.Controllers
             _context = context;
         }
 
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<DataItemResponse>>> GetAll()
+        {
+            var items = await _context.DataItems
+                .Select(x => new DataItemResponse
+                {
+                    ItemId = x.ItemId,
+                    DatasetId = x.DatasetId,
+                    FileUrl = x.FileUrl,
+                    Status = x.Status,
+                    CreatedAt = x.CreatedAt
+                })
+                .ToListAsync();
+
+            return Ok(items);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<DataItemResponse>> GetById(int id)
+        {
+            var item = await _context.DataItems
+                .Where(x => x.ItemId == id)
+                .Select(x => new DataItemResponse
+                {
+                    ItemId = x.ItemId,
+                    DatasetId = x.DatasetId,
+                    FileUrl = x.FileUrl,
+                    Status = x.Status,
+                    CreatedAt = x.CreatedAt
+                })
+                .FirstOrDefaultAsync();
+
+            if (item == null)
+                return NotFound();
+
+            return Ok(item);
+        }
+
 
         [HttpPost]
-        public async Task<IActionResult> CreateDataItem([FromBody] CreateDataItemRequest request)
+        public async Task<ActionResult<DataItemResponse>> Create(CreateDataItemRequest dto)
         {
-            var dataset = await _context.Datasets.FindAsync(request.DatasetId);
-
-            if (dataset == null)
-                return BadRequest("Dataset not found");
-
             var item = new DataItem
             {
-                DatasetId = request.DatasetId,
-                FileUrl = request.FileUrl,
+                DatasetId = dto.DatasetId,
+                FileUrl = dto.FileUrl,
                 Status = "Pending",
                 CreatedAt = DateTime.UtcNow
             };
@@ -40,7 +73,7 @@ namespace DataLabeling.API.Controllers
             _context.DataItems.Add(item);
             await _context.SaveChangesAsync();
 
-            var response = new DataItemResponse
+            var result = new DataItemResponse
             {
                 ItemId = item.ItemId,
                 DatasetId = item.DatasetId,
@@ -49,36 +82,7 @@ namespace DataLabeling.API.Controllers
                 CreatedAt = item.CreatedAt
             };
 
-            return Ok(response);
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> GetAllDataItems()
-        {
-            var items = await _context.DataItems
-                .Include(d => d.Dataset)
-                //.Include(d => d.Annotator)
-                //.Include(d => d.Reviewer)
-                .OrderByDescending(d => d.CreatedAt)
-                .ToListAsync();
-
-            return Ok(items);
-        }
-
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetDataItem(int id)
-        {
-            var item = await _context.DataItems
-                .Include(d => d.Dataset)
-                //.Include(d => d.Annotator)
-                //.Include(d => d.Reviewer)
-                .Include(d => d.Annotations)
-                .FirstOrDefaultAsync(d => d.ItemId == id);
-
-            if (item == null)
-                return NotFound("DataItem not found");
-
-            return Ok(item);
+            return CreatedAtAction(nameof(GetById), new { id = item.ItemId }, result);
         }
 
         [HttpGet("dataset/{datasetId}")]
@@ -86,130 +90,32 @@ namespace DataLabeling.API.Controllers
         {
             var items = await _context.DataItems
                 .Where(d => d.DatasetId == datasetId)
-                //.Include(d => d.Annotator)
-                //.Include(d => d.Reviewer)
-                .OrderByDescending(d => d.CreatedAt)
+                .OrderBy(d => d.ItemId)
+                .Select(d => new DataItemResponse
+                {
+                    ItemId = d.ItemId,
+                    DatasetId = d.DatasetId,
+                    FileUrl = d.FileUrl,
+                    Status = d.Status,
+                    CreatedAt = d.CreatedAt
+                })
                 .ToListAsync();
 
             return Ok(items);
         }
 
-        [HttpPut("{id}/assign-annotator/{userId}")]
-        public async Task<IActionResult> AssignAnnotator(int id, int userId)
-        {
-            var item = await _context.DataItems.FindAsync(id);
-
-            if (item == null)
-                return NotFound("DataItem not found");
-
-            //item.AnnotatorId = userId;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(item);
-        }
-
-        [HttpGet("annotator")]
-        [Authorize]
-        public async Task<IActionResult> GetMyAnnotatorItems()
-        {
-            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
-
-            var items = await _context.DataItems
-                //.Where(d => d.AnnotatorId == userId)
-                //.Include(d => d.Annotator)
-                //.Include(d => d.Reviewer)
-                .OrderByDescending(d => d.CreatedAt)
-                .ToListAsync();
-
-            var response = items.Select(i => new DataItemResponse
-            {
-                ItemId = i.ItemId,
-                DatasetId = i.DatasetId,
-                FileUrl = i.FileUrl,
-                //AnnotatorId = i.AnnotatorId,
-                //ReviewerId = i.ReviewerId,
-                Status = i.Status.ToString(),
-                CreatedAt = i.CreatedAt,
-                //AnnotatorName = i.Annotator != null ? i.Annotator.FullName : null,
-                //ReviewerName = i.Reviewer != null ? i.Reviewer.FullName : null
-            });
-
-            return Ok(response);
-        }
-
-        [HttpPut("{id}/status")]
-        public async Task<IActionResult> UpdateStatus(int id, [FromBody] string status)
-        {
-            var item = await _context.DataItems.FindAsync(id);
-
-            if (item == null)
-                return NotFound("DataItem not found");
-
-            item.Status = status;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(item);
-        }
-
-        [HttpPut("{id}/assign-reviewer/{userId}")]
-        public async Task<IActionResult> AssignReviewer(int id, int userId)
-        {
-            var item = await _context.DataItems.FindAsync(id);
-
-            if (item == null)
-                return NotFound("DataItem not found");
-
-            //item.ReviewerId = userId;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(item);
-        }
-        [HttpGet("reviewer")]
-        [Authorize]
-        public async Task<IActionResult> GetMyReviewerItems()
-        {
-            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
-
-            var items = await _context.DataItems
-                //.Where(d => d.ReviewerId == userId)
-                //.Include(d => d.Annotator)
-                //.Include(d => d.Reviewer)
-                .OrderByDescending(d => d.CreatedAt)
-                .ToListAsync();
-
-            var response = items.Select(i => new DataItemResponse
-            {
-                ItemId = i.ItemId,
-                DatasetId = i.DatasetId,
-                FileUrl = i.FileUrl,
-                //AnnotatorId = i.AnnotatorId,
-                //ReviewerId = i.ReviewerId,
-                Status = i.Status.ToString(),
-                CreatedAt = i.CreatedAt,
-                //AnnotatorName = i.Annotator != null ? i.Annotator.FullName : null,
-                //ReviewerName = i.Reviewer != null ? i.Reviewer.FullName : null
-            });
-
-            return Ok(response);
-        }
-
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteDataItem(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            var item = await _context.DataItems
-                .Include(d => d.Annotations)
-                .FirstOrDefaultAsync(d => d.ItemId == id);
+            var item = await _context.DataItems.FindAsync(id);
 
             if (item == null)
-                return NotFound("DataItem not found");
+                return NotFound();
 
             _context.DataItems.Remove(item);
             await _context.SaveChangesAsync();
 
-            return Ok("DataItem deleted");
+            return NoContent();
         }
     }
 }
