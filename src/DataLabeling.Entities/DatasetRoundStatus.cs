@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DataLabeling.Entities
+namespace DataLabeling.Entities.Enums
 {
     public enum DatasetRoundStatus
     {
