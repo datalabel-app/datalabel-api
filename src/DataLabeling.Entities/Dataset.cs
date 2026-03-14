@@ -13,10 +13,8 @@ namespace DataLabeling.Entities
         [Key]
         public int DatasetId { get; set; }
 
-        [ForeignKey("Project")]
         public int ProjectId { get; set; }
 
-        [Required]
         public string DatasetName { get; set; } = string.Empty;
 
         public string Status { get; set; } = "Active";
@@ -25,8 +23,8 @@ namespace DataLabeling.Entities
 
         public Project Project { get; set; } = null!;
 
-        public ICollection<DatasetRound> DatasetRounds { get; set; } = new List<DatasetRound>();
-
         public ICollection<DataItem> DataItems { get; set; } = new List<DataItem>();
+
+        public ICollection<DatasetRound> Rounds { get; set; } = new List<DatasetRound>();
     }
 }

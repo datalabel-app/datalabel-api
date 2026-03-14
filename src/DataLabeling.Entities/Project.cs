@@ -15,7 +15,6 @@ namespace DataLabeling.Entities
         [Key]
         public int ProjectId { get; set; }
 
-        [ForeignKey("Manager")]
         public int ManagerId { get; set; }
 
         [Required]
@@ -28,8 +27,6 @@ namespace DataLabeling.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public User Manager { get; set; } = null!;
-
-        public ICollection<Label> Labels { get; set; } = new List<Label>();
 
         public ICollection<Dataset> Datasets { get; set; } = new List<Dataset>();
     }

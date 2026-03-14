@@ -6,10 +6,9 @@ using System.Threading.Tasks;
 
 namespace DataLabeling.Entities
 {
-    public enum TaskType
+    public enum ShapeType
     {
-        Labeling = 0,
-        Review = 1,
-        Approval = 2
+        Bbox = 0,
+        Type = 1,
     }
 }
