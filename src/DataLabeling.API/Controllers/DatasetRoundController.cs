@@ -1,14 +1,16 @@
-using DataLabeling.API.DTOs;
-using DataLabeling.DAL;
+﻿using DataLabeling.API.DTOs;
 using DataLabeling.DAL.Data;
 using DataLabeling.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace DataLabeling.API.Controllers
 {
-    [Route("api/datasetrounds")]
     [ApiController]
+    [Route("api/datasetrounds")]
+    [Authorize]
     public class DatasetRoundController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -32,7 +34,6 @@ namespace DataLabeling.API.Controllers
                 DatasetId = request.DatasetId,
                 RoundNumber = request.RoundNumber,
                 Description = request.Description,
-                ShapeType = request.ShapeType,
                 Status = "Active",
                 CreatedAt = DateTime.UtcNow
             };
@@ -46,13 +47,14 @@ namespace DataLabeling.API.Controllers
                 DatasetId = round.DatasetId,
                 RoundNumber = round.RoundNumber,
                 Description = round.Description,
-                ShapeType = round.ShapeType,
                 Status = round.Status,
                 CreatedAt = round.CreatedAt
             };
 
             return Ok(response);
         }
+
+
         [HttpGet]
         public async Task<IActionResult> GetAllRounds()
         {
@@ -63,6 +65,7 @@ namespace DataLabeling.API.Controllers
 
             return Ok(rounds);
         }
+
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetRound(int id)
@@ -77,6 +80,9 @@ namespace DataLabeling.API.Controllers
 
             return Ok(round);
         }
+
+
+        [HttpGet("dataset/{datasetId}")]
         public async Task<IActionResult> GetRoundsByDataset(int datasetId)
         {
             var rounds = await _context.DatasetRounds
@@ -86,6 +92,8 @@ namespace DataLabeling.API.Controllers
 
             return Ok(rounds);
         }
+
+
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateRound(int id, [FromBody] DatasetRound request)
         {
@@ -103,6 +111,7 @@ namespace DataLabeling.API.Controllers
             return Ok(round);
         }
 
+
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] string status)
         {
@@ -117,6 +126,7 @@ namespace DataLabeling.API.Controllers
 
             return Ok(round);
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRound(int id)
