@@ -4,13 +4,27 @@ namespace DataLabeling.API.DTOs
     public class TaskResponse
     {
         public int TaskId { get; set; }
-        public int DatasetRoundId { get; set; }
-        public int AssigneeUserId { get; set; }
-        //public TaskType Type { get; set; }
-        public Entities.TaskStatus Status { get; set; }
-        public int GroupNumber { get; set; }
-        public int? ParentTaskId { get; set; }
+
+        public int DataItemId { get; set; }
+
+        public int RoundId { get; set; }
+
+        public int? AnnotatorId { get; set; }
+
+        public string? AnnotatorName { get; set; }
+
+        public int? ReviewerId { get; set; }
+
+        public string? ReviewerName { get; set; }
+
+        public string Status { get; set; } = "";
+
         public DateTime CreatedAt { get; set; }
-        public DateTime? CompletedAt { get; set; }
+
+        public DateTime? AnnotatedAt { get; set; }
+
+        public DateTime? ReviewedAt { get; set; }
+
+        public string FileUrl { get; set; } = "";
     }
 }
