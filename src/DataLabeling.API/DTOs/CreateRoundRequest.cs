@@ -1,6 +1,4 @@
-﻿using DataLabeling.Entities;
-
-namespace DataLabeling.API.DTOs
+﻿namespace DataLabeling.API.DTOs
 {
     public class CreateRoundRequest
     {
@@ -9,7 +7,5 @@ namespace DataLabeling.API.DTOs
         public int RoundNumber { get; set; }
 
         public string? Description { get; set; }
-
-        public ShapeType ShapeType { get; set; } = ShapeType.Bbox;
     }
 }
