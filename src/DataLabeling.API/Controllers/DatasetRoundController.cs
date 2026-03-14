@@ -1,16 +1,14 @@
 ﻿using DataLabeling.API.DTOs;
+using DataLabeling.DAL;
 using DataLabeling.DAL.Data;
 using DataLabeling.Entities;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace DataLabeling.API.Controllers
 {
-    [ApiController]
     [Route("api/datasetrounds")]
-    [Authorize]
+    [ApiController]
     public class DatasetRoundController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -19,6 +17,23 @@ namespace DataLabeling.API.Controllers
         {
             _context = context;
         }
+
+
+
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllRounds()
+        {
+            var rounds = await _context.DatasetRounds
+                .Include(r => r.Dataset)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            return Ok(rounds);
+        }
+
+
+
 
 
         [HttpPost]
@@ -34,6 +49,7 @@ namespace DataLabeling.API.Controllers
                 DatasetId = request.DatasetId,
                 RoundNumber = request.RoundNumber,
                 Description = request.Description,
+                ShapeType = request.ShapeType,
                 Status = "Active",
                 CreatedAt = DateTime.UtcNow
             };
@@ -47,6 +63,7 @@ namespace DataLabeling.API.Controllers
                 DatasetId = round.DatasetId,
                 RoundNumber = round.RoundNumber,
                 Description = round.Description,
+                ShapeType = round.ShapeType,
                 Status = round.Status,
                 CreatedAt = round.CreatedAt
             };
@@ -55,43 +72,6 @@ namespace DataLabeling.API.Controllers
         }
 
 
-        [HttpGet]
-        public async Task<IActionResult> GetAllRounds()
-        {
-            var rounds = await _context.DatasetRounds
-                .Include(r => r.Dataset)
-                .OrderByDescending(r => r.CreatedAt)
-                .ToListAsync();
-
-            return Ok(rounds);
-        }
-
-
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetRound(int id)
-        {
-            var round = await _context.DatasetRounds
-                .Include(r => r.Dataset)
-                .Include(r => r.Labels)
-                .FirstOrDefaultAsync(r => r.RoundId == id);
-
-            if (round == null)
-                return NotFound("Round not found");
-
-            return Ok(round);
-        }
-
-
-        [HttpGet("dataset/{datasetId}")]
-        public async Task<IActionResult> GetRoundsByDataset(int datasetId)
-        {
-            var rounds = await _context.DatasetRounds
-                .Where(r => r.DatasetId == datasetId)
-                .OrderBy(r => r.RoundNumber)
-                .ToListAsync();
-
-            return Ok(rounds);
-        }
 
 
         [HttpPut("{id}")]
@@ -112,17 +92,31 @@ namespace DataLabeling.API.Controllers
         }
 
 
-        [HttpPut("{id}/status")]
-        public async Task<IActionResult> UpdateStatus(int id, [FromBody] string status)
+
+        [HttpGet("dataset/{datasetId}")]
+        public async Task<IActionResult> GetRoundsByDataset(int datasetId)
         {
-            var round = await _context.DatasetRounds.FindAsync(id);
+            var rounds = await _context.DatasetRounds
+                .Where(r => r.DatasetId == datasetId)
+                .OrderBy(r => r.RoundNumber)
+                .ToListAsync();
+
+            return Ok(rounds);
+        }
+
+
+
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetRound(int id)
+        {
+            var round = await _context.DatasetRounds
+                .Include(r => r.Dataset)
+                .Include(r => r.Labels)
+                .FirstOrDefaultAsync(r => r.RoundId == id);
 
             if (round == null)
                 return NotFound("Round not found");
-
-            round.Status = status;
-
-            await _context.SaveChangesAsync();
 
             return Ok(round);
         }
@@ -143,5 +137,26 @@ namespace DataLabeling.API.Controllers
 
             return Ok("Round deleted");
         }
+
+
+
+
+
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] string status)
+        {
+            var round = await _context.DatasetRounds.FindAsync(id);
+
+            if (round == null)
+                return NotFound("Round not found");
+
+            round.Status = status;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(round);
+        }
+
+
     }
 }
