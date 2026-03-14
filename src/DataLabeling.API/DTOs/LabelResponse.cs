@@ -3,9 +3,11 @@
     public class LabelResponse
     {
         public int LabelId { get; set; }
-        public int ProjectId { get; set; }
-        public string LabelName { get; set; } = string.Empty;
-        public string? LabelType { get; set; }
+
+        public int RoundId { get; set; }
+
+        public string LabelName { get; set; }
+
         public string? Description { get; set; }
     }
 }

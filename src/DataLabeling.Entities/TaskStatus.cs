@@ -9,8 +9,8 @@ namespace DataLabeling.Entities
     public enum TaskStatus
     {
         Pending = 0,
-        InProgress = 1,
-        Completed = 2,
+        Annotating = 1,
+        Approved = 2,
         Rejected = 3
     }
 }

@@ -9,7 +9,7 @@ using System.Security.Claims;
 namespace DataLabeling.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/labels")]
     [Authorize]
     public class LabelController : ControllerBase
     {
@@ -22,21 +22,17 @@ namespace DataLabeling.API.Controllers
 
 
         [HttpPost]
-        public async Task<IActionResult> Create(CreateLabelRequest request)
+        public async Task<IActionResult> CreateLabel([FromBody] CreateLabelRequest request)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var round = await _context.DatasetRounds.FindAsync(request.RoundId);
 
-            var project = await _context.Projects
-                .FirstOrDefaultAsync(p => p.ProjectId == request.ProjectId && p.ManagerId == userId);
-
-            if (project == null)
-                return BadRequest("Project not found or not yours");
+            if (round == null)
+                return BadRequest("Round not found");
 
             var label = new Label
             {
-                ProjectId = request.ProjectId,
+                RoundId = request.RoundId,
                 LabelName = request.LabelName,
-                LabelType = request.LabelType,
                 Description = request.Description
             };
 
@@ -46,51 +42,60 @@ namespace DataLabeling.API.Controllers
             var response = new LabelResponse
             {
                 LabelId = label.LabelId,
-                ProjectId = label.ProjectId,
+                RoundId = label.RoundId,
                 LabelName = label.LabelName,
-                LabelType = label.LabelType,
                 Description = label.Description
             };
 
             return Ok(response);
         }
 
-
-        [HttpGet("project/{projectId}")]
-        public async Task<IActionResult> GetByProject(int projectId)
+        [HttpGet]
+        public async Task<IActionResult> GetAllLabels()
         {
-            var userId = int.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
-
-            var project = await _context.Projects
-                .FirstOrDefaultAsync(p => p.ProjectId == projectId && p.ManagerId == userId);
-
-            if (project == null)
-                return BadRequest("Project not found or not yours");
-
             var labels = await _context.Labels
-                .Where(l => l.ProjectId == projectId)
+                .Include(l => l.Round)
+                .OrderByDescending(l => l.LabelId)
                 .ToListAsync();
 
             return Ok(labels);
         }
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, UpdateLabelRequest request)
-        {
-            var userId = int.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
 
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetLabel(int id)
+        {
             var label = await _context.Labels
-                .Include(l => l.Project)
-                .FirstOrDefaultAsync(l => l.LabelId == id && l.Project.ManagerId == userId);
+                .Include(l => l.Round)
+                .FirstOrDefaultAsync(l => l.LabelId == id);
+
+            if (label == null)
+                return NotFound("Label not found");
+
+            return Ok(label);
+        }
+
+        [HttpGet("round/{roundId}")]
+        public async Task<IActionResult> GetLabelsByRound(int roundId)
+        {
+            var labels = await _context.Labels
+                .Where(l => l.RoundId == roundId)
+                .OrderBy(l => l.LabelName)
+                .ToListAsync();
+
+            return Ok(labels);
+        }
+
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateLabel(int id, [FromBody] Label request)
+        {
+            var label = await _context.Labels.FindAsync(id);
 
             if (label == null)
                 return NotFound("Label not found");
 
             label.LabelName = request.LabelName;
-            label.LabelType = request.LabelType;
             label.Description = request.Description;
 
             await _context.SaveChangesAsync();
@@ -100,15 +105,9 @@ namespace DataLabeling.API.Controllers
 
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> DeleteLabel(int id)
         {
-            var userId = int.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
-
-            var label = await _context.Labels
-                .Include(l => l.Project)
-                .FirstOrDefaultAsync(l => l.LabelId == id && l.Project.ManagerId == userId);
+            var label = await _context.Labels.FindAsync(id);
 
             if (label == null)
                 return NotFound("Label not found");
@@ -116,9 +115,7 @@ namespace DataLabeling.API.Controllers
             _context.Labels.Remove(label);
             await _context.SaveChangesAsync();
 
-            return Ok("Deleted successfully");
+            return Ok("Label deleted");
         }
-
-
     }
 }
