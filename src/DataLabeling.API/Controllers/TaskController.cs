@@ -7,146 +7,208 @@ using System.Security.Claims;
 
 namespace DataLabeling.API.Controllers
 {
-    //[Route("api/[controller]")]
-    //[ApiController]
-    //public class TaskController : ControllerBase
-    //{
-    //    private readonly ApplicationDbContext _context;
+    [Route("api/tasks")]
+    [ApiController]
+    public class TaskController : ControllerBase
+    {
+        private readonly ApplicationDbContext _context;
 
-    //    public TaskController(ApplicationDbContext context)
-    //    {
-    //        _context = context;
-    //    }
+        public TaskController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
 
+        [HttpGet("round/{roundId}")]
+        public async Task<IActionResult> GetTasksByRound(int roundId)
+        {
+            var tasks = await _context.Tasks
+                .Where(t => t.RoundId == roundId && t.Status != Entities.TaskStatus.Pending)
+                .Include(t => t.DataItem)
+                .Include(t => t.Annotator)
+                .Include(t => t.Reviewer)
+                .OrderBy(t => t.TaskId)
+                .Select(t => new TaskResponse
+                {
+                    TaskId = t.TaskId,
+                    DataItemId = t.DataItemId,
+                    RoundId = t.RoundId,
 
-    //    [HttpPost]
-    //    public async Task<IActionResult> Create(CreateTaskRequest request)
-    //    {
-    //        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                    AnnotatorId = t.AnnotatorId,
+                    AnnotatorName = t.Annotator != null ? t.Annotator.FullName : null,
 
-    //        var datasetRound = await _context.DatasetRounds
-    //            .Include(r => r.Dataset)
-    //            .ThenInclude(d => d.Project)
-    //            .FirstOrDefaultAsync(r =>
-    //                r.DatasetRoundId == request.DatasetRoundId &&
-    //                r.Dataset.Project.ManagerId == userId);
+                    ReviewerId = t.ReviewerId,
+                    ReviewerName = t.Reviewer != null ? t.Reviewer.FullName : null,
 
-    //        if (datasetRound == null)
-    //            return BadRequest("DatasetRound not found or not yours");
+                    Status = t.Status.ToString(),
 
-    //        var entity = new DataLabeling.Entities.Task
-    //        {
-    //            DatasetRoundId = request.DatasetRoundId,
-    //            AssigneeUserId = request.AssigneeUserId,
-    //            Type = request.Type,
-    //            GroupNumber = request.GroupNumber,
-    //            ParentTaskId = request.ParentTaskId
-    //        };
+                    CreatedAt = t.CreatedAt,
+                    AnnotatedAt = t.AnnotatedAt,
+                    ReviewedAt = t.ReviewedAt,
 
-    //        _context.Set<DataLabeling.Entities.Task>().Add(entity);
-    //        await _context.SaveChangesAsync();
+                    FileUrl = t.DataItem.FileUrl
+                })
+                .ToListAsync();
 
-    //        return Ok(MapToResponse(entity));
-    //    }
+            return Ok(tasks);
+        }
 
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<TaskResponse>>> GetAll()
+        {
+            var tasks = await _context.Tasks
+                .Select(t => new TaskResponse
+                {
+                    TaskId = t.TaskId,
+                    DataItemId = t.DataItemId,
+                    RoundId = t.RoundId,
+                    AnnotatorId = t.AnnotatorId,
+                    ReviewerId = t.ReviewerId,
+                    Status = t.Status.ToString(),
+                    CreatedAt = t.CreatedAt,
+                    AnnotatedAt = t.AnnotatedAt,
+                    ReviewedAt = t.ReviewedAt
+                })
+                .ToListAsync();
 
-    //    [HttpGet("round/{roundId}")]
-    //    public async Task<IActionResult> GetByRound(int roundId)
-    //    {
-    //        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            return Ok(tasks);
+        }
 
-    //        var datasetRound = await _context.DatasetRounds
-    //            .Include(r => r.Dataset)
-    //            .ThenInclude(d => d.Project)
-    //            .FirstOrDefaultAsync(r =>
-    //                r.DatasetRoundId == roundId &&
-    //                r.Dataset.Project.ManagerId == userId);
+        [HttpGet("{taskId}")]
+        public async Task<IActionResult> GetTaskById(int taskId)
+        {
+            var task = await _context.Tasks
+                .Include(t => t.DataItem)
+                .Include(t => t.Round)
+                .FirstOrDefaultAsync(t => t.TaskId == taskId);
 
-    //        if (datasetRound == null)
-    //            return BadRequest("DatasetRound not found or not yours");
+            if (task == null)
+                return NotFound();
 
-    //        var tasks = await _context.Set<Entities.Task>()
-    //            .Where(t => t.DatasetRoundId == roundId)
-    //            .Select(t => MapToResponse(t))
-    //            .ToListAsync();
+            return Ok(new
+            {
+                task.TaskId,
+                task.Status,
 
-    //        return Ok(tasks);
-    //    }
+                ItemId = task.DataItemId,
 
-    //    [HttpPut("{id}")]
-    //    public async Task<IActionResult> Update(int id, UpdateTaskRequest request)
-    //    {
-    //        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                FileUrl = task.DataItem.FileUrl,
 
-    //        var task = await _context.Set<DataLabeling.Entities.Task>()
-    //            .Include(t => t.DatasetRound)
-    //            .ThenInclude(r => r.Dataset)
-    //            .ThenInclude(d => d.Project)
-    //            .FirstOrDefaultAsync(t =>
-    //                t.TaskId == id &&
-    //                t.DatasetRound.Dataset.Project.ManagerId == userId);
-
-    //        if (task == null)
-    //            return NotFound("Task not found");
-
-    //        if (request.Status.HasValue)
-    //        {
-    //            task.Status = request.Status.Value;
-
-    //            if (task.Status == DataLabeling.Entities.TaskStatus.Completed)
-    //                task.CompletedAt = DateTime.UtcNow;
-    //            else
-    //                task.CompletedAt = null;
-    //        }
-
-    //        if (request.Type.HasValue)
-    //            task.Type = request.Type.Value;
-
-    //        if (request.GroupNumber.HasValue)
-    //            task.GroupNumber = request.GroupNumber.Value;
-
-    //        await _context.SaveChangesAsync();
-
-    //        return Ok(MapToResponse(task));
-    //    }
+                Round = new
+                {
+                    task.Round.RoundId,
+                    task.Round.RoundNumber,
+                    task.Round.ShapeType,
+                    task.Round.Description
+                }
+            });
+        }
 
 
-    //    [HttpDelete("{id}")]
-    //    public async Task<IActionResult> Delete(int id)
-    //    {
-    //        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        //    [HttpPost]
+        //    public async Task<IActionResult> Create(CreateTaskRequest request)
+        //    {
+        //        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    //        var task = await _context.Set<DataLabeling.Entities.Task>()
-    //            .Include(t => t.DatasetRound)
-    //            .ThenInclude(r => r.Dataset)
-    //            .ThenInclude(d => d.Project)
-    //            .FirstOrDefaultAsync(t =>
-    //                t.TaskId == id &&
-    //                t.DatasetRound.Dataset.Project.ManagerId == userId);
+        //        var datasetRound = await _context.DatasetRounds
+        //            .Include(r => r.Dataset)
+        //            .ThenInclude(d => d.Project)
+        //            .FirstOrDefaultAsync(r =>
+        //                r.DatasetRoundId == request.DatasetRoundId &&
+        //                r.Dataset.Project.ManagerId == userId);
 
-    //        if (task == null)
-    //            return NotFound("Task not found");
+        //        if (datasetRound == null)
+        //            return BadRequest("DatasetRound not found or not yours");
 
-    //        _context.Remove(task);
-    //        await _context.SaveChangesAsync();
+        //        var entity = new DataLabeling.Entities.Task
+        //        {
+        //            DatasetRoundId = request.DatasetRoundId,
+        //            AssigneeUserId = request.AssigneeUserId,
+        //            Type = request.Type,
+        //            GroupNumber = request.GroupNumber,
+        //            ParentTaskId = request.ParentTaskId
+        //        };
 
-    //        return Ok("Deleted successfully");
-    //    }
+        //        _context.Set<DataLabeling.Entities.Task>().Add(entity);
+        //        await _context.SaveChangesAsync();
 
-    //    private static TaskResponse MapToResponse(Entities.Task entity)
-    //    {
-    //        return new TaskResponse
-    //        {
-    //            TaskId = entity.TaskId,
-    //            DatasetRoundId = entity.DatasetRoundId,
-    //            AssigneeUserId = entity.AssigneeUserId,
-    //            Type = entity.Type,
-    //            Status = entity.Status,
-    //            GroupNumber = entity.GroupNumber,
-    //            ParentTaskId = entity.ParentTaskId,
-    //            CreatedAt = entity.CreatedAt,
-    //            CompletedAt = entity.CompletedAt
-    //        };
-    //    }
-    //}
+        //        return Ok(MapToResponse(entity));
+        //    }
+
+
+        //    [HttpPut("{id}")]
+        //    public async Task<IActionResult> Update(int id, UpdateTaskRequest request)
+        //    {
+        //        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        //        var task = await _context.Set<DataLabeling.Entities.Task>()
+        //            .Include(t => t.DatasetRound)
+        //            .ThenInclude(r => r.Dataset)
+        //            .ThenInclude(d => d.Project)
+        //            .FirstOrDefaultAsync(t =>
+        //                t.TaskId == id &&
+        //                t.DatasetRound.Dataset.Project.ManagerId == userId);
+
+        //        if (task == null)
+        //            return NotFound("Task not found");
+
+        //        if (request.Status.HasValue)
+        //        {
+        //            task.Status = request.Status.Value;
+
+        //            if (task.Status == DataLabeling.Entities.TaskStatus.Completed)
+        //                task.CompletedAt = DateTime.UtcNow;
+        //            else
+        //                task.CompletedAt = null;
+        //        }
+
+        //        if (request.Type.HasValue)
+        //            task.Type = request.Type.Value;
+
+        //        if (request.GroupNumber.HasValue)
+        //            task.GroupNumber = request.GroupNumber.Value;
+
+        //        await _context.SaveChangesAsync();
+
+        //        return Ok(MapToResponse(task));
+        //    }
+
+
+        //    [HttpDelete("{id}")]
+        //    public async Task<IActionResult> Delete(int id)
+        //    {
+        //        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        //        var task = await _context.Set<DataLabeling.Entities.Task>()
+        //            .Include(t => t.DatasetRound)
+        //            .ThenInclude(r => r.Dataset)
+        //            .ThenInclude(d => d.Project)
+        //            .FirstOrDefaultAsync(t =>
+        //                t.TaskId == id &&
+        //                t.DatasetRound.Dataset.Project.ManagerId == userId);
+
+        //        if (task == null)
+        //            return NotFound("Task not found");
+
+        //        _context.Remove(task);
+        //        await _context.SaveChangesAsync();
+
+        //        return Ok("Deleted successfully");
+        //    }
+
+        //    private static TaskResponse MapToResponse(Entities.Task entity)
+        //    {
+        //        return new TaskResponse
+        //        {
+        //            TaskId = entity.TaskId,
+        //            DatasetRoundId = entity.DatasetRoundId,
+        //            AssigneeUserId = entity.AssigneeUserId,
+        //            Type = entity.Type,
+        //            Status = entity.Status,
+        //            GroupNumber = entity.GroupNumber,
+        //            ParentTaskId = entity.ParentTaskId,
+        //            CreatedAt = entity.CreatedAt,
+        //            CompletedAt = entity.CompletedAt
+        //        };
+        //    }
+    }
 }
