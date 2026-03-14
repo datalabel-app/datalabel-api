@@ -36,10 +36,6 @@ namespace DataLabeling.API.Controllers
 
 
 
-
-
-
-
         [HttpPost]
         public async Task<IActionResult> CreateRound([FromBody] CreateRoundRequest request)
         {
@@ -76,9 +72,67 @@ namespace DataLabeling.API.Controllers
         }
 
 
+
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateRound(int id, [FromBody] DatasetRound request)
+        {
+            var round = await _context.DatasetRounds.FindAsync(id);
+
+            if (round == null)
+                return NotFound("Round not found");
+
+            round.RoundNumber = request.RoundNumber;
+            round.Description = request.Description;
+            round.Status = request.Status;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(round);
+        }
+
+
+
+        [HttpGet("dataset/{datasetId}")]
+        public async Task<IActionResult> GetRoundsByDataset(int datasetId)
+        {
+            var rounds = await _context.DatasetRounds
+                .Where(r => r.DatasetId == datasetId)
+                .OrderBy(r => r.RoundNumber)
+                .ToListAsync();
+
+            return Ok(rounds);
+        }
+
+
+
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetRound(int id)
+        {
+            var round = await _context.DatasetRounds
+                .Include(r => r.Dataset)
+                .Include(r => r.Labels)
+                .FirstOrDefaultAsync(r => r.RoundId == id);
+
+            if (round == null)
+                return NotFound("Round not found");
+
+            return Ok(round);
+        }
+
+
+
+
         
 
 
         
+
+
+
+
+
+
     }
 }
