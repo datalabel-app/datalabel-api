@@ -122,16 +122,40 @@ namespace DataLabeling.API.Controllers
         }
 
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteRound(int id)
+        {
+            var round = await _context.DatasetRounds
+                .Include(r => r.Labels)
+                .FirstOrDefaultAsync(r => r.RoundId == id);
+
+            if (round == null)
+                return NotFound("Round not found");
+
+            _context.DatasetRounds.Remove(round);
+            await _context.SaveChangesAsync();
+
+            return Ok("Round deleted");
+        }
 
 
-        
-
-
-        
 
 
 
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] string status)
+        {
+            var round = await _context.DatasetRounds.FindAsync(id);
 
+            if (round == null)
+                return NotFound("Round not found");
+
+            round.Status = status;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(round);
+        }
 
 
     }
