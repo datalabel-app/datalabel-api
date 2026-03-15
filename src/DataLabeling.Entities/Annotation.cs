@@ -16,6 +16,8 @@ namespace DataLabeling.Entities
 
         public int LabelId { get; set; }
 
+        public int TaskId { get; set; }
+
         public int RoundId { get; set; }
 
         public int AnnotatorId { get; set; }
@@ -25,6 +27,8 @@ namespace DataLabeling.Entities
         public string Coordinates { get; set; } = string.Empty;
 
         public string? Classification { get; set; }
+
+        public Task Task { get; set; } = null!;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
