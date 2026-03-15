@@ -114,4 +114,32 @@ public class AnnotationController : ControllerBase
         return Ok(result);
     }
 
+
+    [HttpGet("task/{taskId}")]
+    public async Task<IActionResult> GetAnnotationsByTask(int taskId)
+    {
+        var annotations = await _context.Annotations
+            .Include(a => a.Label)
+            .Include(a => a.Annotator)
+            .Where(a => a.TaskId == taskId)
+            .Select(a => new
+            {
+                a.AnnotationId,
+                a.TaskId,
+                a.ItemId,
+                a.LabelId,
+                LabelName = a.Label.LabelName,
+                a.RoundId,
+                a.ShapeType,
+                a.Coordinates,
+                a.Classification,
+                a.AnnotatorId,
+                AnnotatorName = a.Annotator.FullName,
+                a.CreatedAt
+            })
+            .ToListAsync();
+
+        return Ok(annotations);
+    }
+
 }
