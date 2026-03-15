@@ -103,6 +103,61 @@ namespace DataLabeling.API.Controllers
             });
         }
 
+        [HttpGet("my-annotator-tasks")]
+        public async Task<IActionResult> GetMyAnnotatorTasks()
+        {
+            var userId = int.Parse(
+                User.FindFirst(ClaimTypes.NameIdentifier)!.Value
+            );
+
+            var tasks = await _context.Tasks
+                .Where(t => t.AnnotatorId == userId)
+                .Select(t => new
+                {
+                    t.TaskId,
+                    t.DataItemId,
+                    t.Status,
+                    t.CreatedAt,
+
+                    FileUrl = t.DataItem.FileUrl,
+
+                    Round = new
+                    {
+                        t.Round.RoundId,
+                        t.Round.RoundNumber,
+                        t.Round.ShapeType,
+                        t.Round.Description,
+                        t.Round.Status,
+                        t.Round.CreatedAt,
+                    }
+                })
+                .ToListAsync();
+
+            return Ok(tasks);
+        }
+
+        [HttpGet("my-reviewer-tasks")]
+        public async Task<IActionResult> GetMyReviewerTasks()
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            var tasks = await _context.Tasks
+                .Where(t => t.ReviewerId == userId)
+                .Select(t => new
+                {
+                    t.TaskId,
+                    t.DataItemId,
+                    FileUrl = t.DataItem.FileUrl,
+                    t.RoundId,
+                    RoundNumber = t.Round.RoundNumber,
+                    Status = t.Status.ToString(),
+                    t.CreatedAt
+                })
+                .ToListAsync();
+
+            return Ok(tasks);
+        }
+
 
         //    [HttpPost]
         //    public async Task<IActionResult> Create(CreateTaskRequest request)
