@@ -189,42 +189,39 @@ namespace DataLabeling.API.Controllers
         }
 
 
-        //    [HttpPut("{id}")]
-        //    public async Task<IActionResult> Update(int id, UpdateTaskRequest request)
-        //    {
-        //        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, UpdateTaskRequest dto)
+        {
+            var task = await _context.Tasks.FindAsync(id);
 
-        //        var task = await _context.Set<DataLabeling.Entities.Task>()
-        //            .Include(t => t.DatasetRound)
-        //            .ThenInclude(r => r.Dataset)
-        //            .ThenInclude(d => d.Project)
-        //            .FirstOrDefaultAsync(t =>
-        //                t.TaskId == id &&
-        //                t.DatasetRound.Dataset.Project.ManagerId == userId);
+            if (task == null)
+                return NotFound();
 
-        //        if (task == null)
-        //            return NotFound("Task not found");
+            if (dto.AnnotatorId != null)
+                task.AnnotatorId = dto.AnnotatorId;
 
-        //        if (request.Status.HasValue)
-        //        {
-        //            task.Status = request.Status.Value;
+            if (dto.ReviewerId != null)
+                task.ReviewerId = dto.ReviewerId;
 
-        //            if (task.Status == DataLabeling.Entities.TaskStatus.Completed)
-        //                task.CompletedAt = DateTime.UtcNow;
-        //            else
-        //                task.CompletedAt = null;
-        //        }
+            if (!string.IsNullOrEmpty(dto.Status))
+            {
+                if (Enum.TryParse<DataLabeling.Entities.TaskStatus>(dto.Status, true, out var status))
+                {
+                    task.Status = status;
 
-        //        if (request.Type.HasValue)
-        //            task.Type = request.Type.Value;
+                    if (status == DataLabeling.Entities.TaskStatus.Annotating)
+                        task.AnnotatedAt = DateTime.UtcNow;
 
-        //        if (request.GroupNumber.HasValue)
-        //            task.GroupNumber = request.GroupNumber.Value;
+                    if (status == DataLabeling.Entities.TaskStatus.Approved)
+                        task.ReviewedAt = DateTime.UtcNow;
+                }
+            }
 
-        //        await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
 
-        //        return Ok(MapToResponse(task));
-        //    }
+            return NoContent();
+        }
+
 
 
         //    [HttpDelete("{id}")]
