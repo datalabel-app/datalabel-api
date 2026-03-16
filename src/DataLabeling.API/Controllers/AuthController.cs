@@ -2,6 +2,7 @@
 using DataLabeling.API.DTOs;
 using DataLabeling.DAL.Data;
 using DataLabeling.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -24,41 +25,6 @@ namespace DataLabeling.API.Controllers
         {
             _context = context;
             _configuration = configuration;
-        }
-
-   
-        [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterRequest request)
-        {
-            var emailExists = await _context.Users
-                .AnyAsync(x => x.Email == request.Email);
-
-            if (emailExists)
-                return BadRequest("Email already exists");
-
-            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
-
-            var user = new User
-            {
-                FullName = request.FullName,
-                Email = request.Email,
-                Password = hashedPassword,
-                Role = request.Role ?? UserRole.Annotator,
-                Status = "Active",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Register success",
-                userId = user.UserId,
-                email = user.Email,
-                role = user.Role
-            });
         }
 
         [HttpPost("login")]
@@ -87,7 +53,6 @@ namespace DataLabeling.API.Controllers
                 role = user.Role
             });
         }
-
 
         private string GenerateJwtToken(User user)
         {
@@ -121,7 +86,5 @@ namespace DataLabeling.API.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-
-
     }
 }

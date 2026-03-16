@@ -1,4 +1,6 @@
-﻿using DataLabeling.DAL.Data;
+using DataLabeling.API.Extensions;
+using DataLabeling.BLL;
+using DataLabeling.DAL.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -20,6 +22,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection")
     )
 );
+
+
+// =============================
+// EMAIL SERVICE
+// =============================
+builder.Services.AddScoped<EmailService>();
 
 
 // =============================
@@ -109,6 +117,12 @@ builder.Services.AddSwaggerGen(options =>
 
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await DatabaseSeeder.SeedAdminUserAsync(context);
+}
 
 
 

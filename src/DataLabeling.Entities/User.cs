@@ -15,6 +15,7 @@ namespace DataLabeling.Entities
         public string Email { get; set; }
 
         public string Password { get; set; }
+        public bool IsChangePassword { get; set; } = false;
 
         public UserRole Role { get; set; }
 
