@@ -1,5 +1,4 @@
 ﻿using DataLabeling.Entities;
-using DataLabeling.Entities.Enums;
 
 namespace DataLabeling.API.DTOs
 {
