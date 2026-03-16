@@ -1,13 +1,18 @@
 ﻿using DataLabeling.Entities;
+using System.ComponentModel.DataAnnotations;
 
 namespace DataLabeling.API.DTOs
 {
     public class CreateTaskRequest
     {
-        public int DatasetRoundId { get; set; }
-        public int AssigneeUserId { get; set; }
-        //public TaskType Type { get; set; } = TaskType.Labeling;
-        public int GroupNumber { get; set; }
-        public int? ParentTaskId { get; set; }
+        [Required]
+        public int DataItemId { get; set; }
+
+        [Required]
+        public int RoundId { get; set; }
+
+        public int? AnnotatorId { get; set; }
+
+        public int? ReviewerId { get; set; }
     }
 }

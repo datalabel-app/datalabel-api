@@ -158,36 +158,35 @@ namespace DataLabeling.API.Controllers
             return Ok(tasks);
         }
 
+        [HttpPost]
+        public async Task<ActionResult<TaskResponse>> Create(CreateTaskRequest dto)
+        {
+            var task = new Entities.Task
+            {
+                DataItemId = dto.DataItemId,
+                RoundId = dto.RoundId,
+                AnnotatorId = dto.AnnotatorId,
+                ReviewerId = dto.ReviewerId,
+                Status = DataLabeling.Entities.TaskStatus.Pending,
+                CreatedAt = DateTime.UtcNow
+            };
 
-        //    [HttpPost]
-        //    public async Task<IActionResult> Create(CreateTaskRequest request)
-        //    {
-        //        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            _context.Tasks.Add(task);
+            await _context.SaveChangesAsync();
 
-        //        var datasetRound = await _context.DatasetRounds
-        //            .Include(r => r.Dataset)
-        //            .ThenInclude(d => d.Project)
-        //            .FirstOrDefaultAsync(r =>
-        //                r.DatasetRoundId == request.DatasetRoundId &&
-        //                r.Dataset.Project.ManagerId == userId);
+            var result = new TaskResponse
+            {
+                TaskId = task.TaskId,
+                DataItemId = task.DataItemId,
+                RoundId = task.RoundId,
+                AnnotatorId = task.AnnotatorId,
+                ReviewerId = task.ReviewerId,
+                Status = task.Status.ToString(),
+                CreatedAt = task.CreatedAt
+            };
 
-        //        if (datasetRound == null)
-        //            return BadRequest("DatasetRound not found or not yours");
-
-        //        var entity = new DataLabeling.Entities.Task
-        //        {
-        //            DatasetRoundId = request.DatasetRoundId,
-        //            AssigneeUserId = request.AssigneeUserId,
-        //            Type = request.Type,
-        //            GroupNumber = request.GroupNumber,
-        //            ParentTaskId = request.ParentTaskId
-        //        };
-
-        //        _context.Set<DataLabeling.Entities.Task>().Add(entity);
-        //        await _context.SaveChangesAsync();
-
-        //        return Ok(MapToResponse(entity));
-        //    }
+            return CreatedAtAction(nameof(GetTaskById), new { taskId = task.TaskId }, result);
+        }
 
 
         //    [HttpPut("{id}")]
