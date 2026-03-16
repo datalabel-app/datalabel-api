@@ -222,44 +222,20 @@ namespace DataLabeling.API.Controllers
             return NoContent();
         }
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var task = await _context.Tasks.FindAsync(id);
 
+            if (task == null)
+                return NotFound();
 
-        //    [HttpDelete("{id}")]
-        //    public async Task<IActionResult> Delete(int id)
-        //    {
-        //        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            _context.Tasks.Remove(task);
 
-        //        var task = await _context.Set<DataLabeling.Entities.Task>()
-        //            .Include(t => t.DatasetRound)
-        //            .ThenInclude(r => r.Dataset)
-        //            .ThenInclude(d => d.Project)
-        //            .FirstOrDefaultAsync(t =>
-        //                t.TaskId == id &&
-        //                t.DatasetRound.Dataset.Project.ManagerId == userId);
+            await _context.SaveChangesAsync();
 
-        //        if (task == null)
-        //            return NotFound("Task not found");
+            return NoContent();
+        }
 
-        //        _context.Remove(task);
-        //        await _context.SaveChangesAsync();
-
-        //        return Ok("Deleted successfully");
-        //    }
-
-        //    private static TaskResponse MapToResponse(Entities.Task entity)
-        //    {
-        //        return new TaskResponse
-        //        {
-        //            TaskId = entity.TaskId,
-        //            DatasetRoundId = entity.DatasetRoundId,
-        //            AssigneeUserId = entity.AssigneeUserId,
-        //            Type = entity.Type,
-        //            Status = entity.Status,
-        //            GroupNumber = entity.GroupNumber,
-        //            ParentTaskId = entity.ParentTaskId,
-        //            CreatedAt = entity.CreatedAt,
-        //            CompletedAt = entity.CompletedAt
-        //        };
-        //    }
     }
 }
