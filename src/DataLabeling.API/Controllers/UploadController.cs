@@ -2,6 +2,7 @@
 using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.IO.Compression;
 
 namespace DataLabeling.API.Controllers
 {
@@ -80,6 +81,69 @@ namespace DataLabeling.API.Controllers
                     url = uploadResult.SecureUrl.ToString(),
                     publicId = uploadResult.PublicId
                 });
+            }
+
+            return Ok(results);
+        }
+
+        [HttpPost("zip")]
+        public async Task<IActionResult> UploadZip(IFormFile zipFile)
+        {
+            if (zipFile == null || zipFile.Length == 0)
+                return BadRequest("Zip file không hợp lệ");
+
+            var results = new List<object>();
+            using var zipStream = zipFile.OpenReadStream();
+            using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
+
+            foreach (var entry in archive.Entries)
+            {
+                if (entry.Length == 0 || string.IsNullOrEmpty(entry.Name))
+                    continue;
+
+                var extension = Path.GetExtension(entry.Name).ToLower();
+
+                try
+                {
+                    using var entryStream = entry.Open();
+                    UploadResult? uploadResult = null;
+                    if (extension == ".jpg" || extension == ".jpeg" || extension == ".png" || extension == ".webp")
+                    {
+                        var uploadParams = new ImageUploadParams
+                        {
+                            File = new FileDescription(entry.Name, entryStream),
+                            Folder = "datalabeling"
+                        };
+
+                        uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                    }
+                    else if (extension == ".mp4" || extension == ".mov" || extension == ".avi"
+                          || extension == ".mp3" || extension == ".wav")
+                    {
+                        var uploadParams = new VideoUploadParams
+                        {
+                            File = new FileDescription(entry.Name, entryStream),
+                            Folder = "datalabeling"
+                        };
+
+                        uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                    }
+                    else continue;
+
+                    if (uploadResult == null || uploadResult.Error != null)
+                        return BadRequest(uploadResult?.Error?.Message ?? "Upload thất bại");
+
+                    results.Add(new
+                    {
+                        fileName = entry.Name,
+                        url = uploadResult.SecureUrl?.ToString(),
+                        publicId = uploadResult.PublicId
+                    });
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest($"Lỗi khi upload file {entry.Name}: {ex.Message}");
+                }
             }
 
             return Ok(results);
