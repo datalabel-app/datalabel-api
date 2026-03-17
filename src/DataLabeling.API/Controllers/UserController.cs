@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using Task = System.Threading.Tasks.Task;
 
@@ -116,6 +117,71 @@ namespace DataLabeling.API.Controllers
                 password[i] = validChars[randomBytes[i] % validChars.Length];
             }
             return new string(password);
+        }
+
+        [Authorize]
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized(new { message = "Invalid token" });
+
+            int userId = int.Parse(userIdClaim);
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.UserId == userId);
+
+            if (user == null)
+                return NotFound(new { message = "User not found" });
+
+            bool isMatch = BCrypt.Net.BCrypt.Verify(request.OldPassword, user.Password);
+
+            if (!isMatch)
+                return BadRequest(new { message = "Old password is incorrect" });
+
+            if (request.OldPassword == request.NewPassword)
+                return BadRequest(new { message = "New password must be different" });
+
+            user.Password = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            user.IsChangePassword = true;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Password changed successfully" });
+        }
+
+        [Authorize]
+        [HttpGet("me")]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (userIdClaim == null)
+                return Unauthorized(new { message = "Invalid token" });
+
+            int userId = int.Parse(userIdClaim);
+
+            var user = await _context.Users
+                .Where(u => u.UserId == userId)
+                .Select(u => new
+                {
+                    u.UserId,
+                    u.FullName,
+                    u.Email,
+                    u.Role,
+                    u.Status,
+                    u.IsChangePassword,
+                    u.CreatedAt
+                })
+                .FirstOrDefaultAsync();
+
+            if (user == null)
+                return NotFound(new { message = "User not found" });
+
+            return Ok(user);
         }
     }
 }
