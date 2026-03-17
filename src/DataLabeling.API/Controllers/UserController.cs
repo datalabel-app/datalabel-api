@@ -183,5 +183,92 @@ namespace DataLabeling.API.Controllers
 
             return Ok(user);
         }
+
+        [Authorize]
+        [HttpPut("me")]
+        public async Task<IActionResult> UpdateProfile(UpdateUserRequest request)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (userIdClaim == null)
+                return Unauthorized(new { message = "Invalid token" });
+
+            int userId = int.Parse(userIdClaim);
+
+            var user = await _context.Users.FindAsync(userId);
+
+            if (user == null)
+                return NotFound(new { message = "User not found" });
+
+            if (!string.IsNullOrEmpty(request.FullName))
+                user.FullName = request.FullName;
+
+
+
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Update success",
+                user.UserId,
+                user.FullName,
+                user.Email,
+                user.Role,
+                user.Status
+            });
+        }
+
+
+        [HttpGet("reviewers")]
+        public async Task<IActionResult> GetReviewers()
+        {
+            var users = await _context.Users
+                .Where(x => x.Role == UserRole.Reviewer)
+                .ToListAsync();
+
+            return Ok(users);
+        }
+
+
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.UserId == id);
+
+            if (user == null)
+                return NotFound("User not found");
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "User deleted successfully"
+            });
+        }
+
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> ChangeStatus(int id, string status)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.UserId == id);
+
+            if (user == null)
+                return NotFound("User not found");
+
+            user.Status = status;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Status updated"
+            });
+        }
     }
 }
