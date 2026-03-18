@@ -1,4 +1,4 @@
-﻿using BCrypt.Net;
+using BCrypt.Net;
 using DataLabeling.API.DTOs;
 using DataLabeling.BLL;
 using DataLabeling.DAL.Data;
@@ -76,6 +76,124 @@ namespace DataLabeling.API.Controllers
             });
         }
 
+        [AllowAnonymous]
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.Email == request.Email);
+
+            if (user == null)
+                return BadRequest("Email does not exist");
+
+            var existingTokens = await _context.Token
+                .Where(x => x.UserId == user.UserId 
+                    && x.TokenType == "OTP" 
+                    && !x.IsUsed 
+                    && x.Expired > DateTime.UtcNow)
+                .ToListAsync();
+
+            foreach (var token in existingTokens)
+            {
+                token.IsUsed = true;
+                token.UpdatedAt = DateTime.UtcNow;
+            }
+
+            string otp = GenerateOtp();
+
+            var newToken = new Token
+            {
+                UserId = user.UserId,
+                TokenType = "OTP",
+                TokenValue = otp,
+                IsUsed = false,
+                Expired = DateTime.UtcNow.AddMinutes(5),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _context.Token.Add(newToken);
+            await _context.SaveChangesAsync();
+
+            _ = System.Threading.Tasks.Task.Run(async () =>
+            {
+                await _emailService.SendForgotPasswordOtpEmailAsync(
+                    user.Email,
+                    user.FullName,
+                    otp
+                );
+            });
+
+            return Ok(new
+            {
+                message = "OTP has been sent to your email"
+            });
+        }
+
+        [AllowAnonymous]
+        [HttpPost("verify-otp")]
+        public async Task<IActionResult> VerifyOtp(VerifyOtpRequest request)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.Email == request.Email);
+
+            if (user == null)
+                return BadRequest("Email does not exist");
+
+            var token = await _context.Token
+                .Where(x => x.UserId == user.UserId
+                    && x.TokenType == "OTP"
+                    && x.TokenValue == request.Otp
+                    && !x.IsUsed
+                    && x.Expired > DateTime.UtcNow)
+                .OrderByDescending(x => x.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (token == null)
+                return BadRequest("Invalid or expired OTP");
+
+            return Ok(new
+            {
+                message = "OTP verified successfully"
+            });
+        }
+
+        [AllowAnonymous]
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword(ResetPasswordRequest request)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.Email == request.Email);
+
+            if (user == null)
+                return BadRequest("Email does not exist");
+
+            var token = await _context.Token
+                .Where(x => x.UserId == user.UserId
+                    && x.TokenType == "OTP"
+                    && x.TokenValue == request.Otp
+                    && !x.IsUsed
+                    && x.Expired > DateTime.UtcNow)
+                .OrderByDescending(x => x.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (token == null)
+                return BadRequest("Invalid or expired OTP");
+
+            user.Password = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            user.UpdatedAt = DateTime.UtcNow;
+
+            token.IsUsed = true;
+            token.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Password has been reset successfully"
+            });
+        }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequest request)
         {
@@ -99,7 +217,8 @@ namespace DataLabeling.API.Controllers
             {
                 token,
                 email = user.Email,
-                role = user.Role
+                role = user.Role,
+                isChangePassword = user.IsChangePassword,
             });
         }
 
@@ -148,6 +267,18 @@ namespace DataLabeling.API.Controllers
                 password[i] = validChars[randomBytes[i] % validChars.Length];
             }
             return new string(password);
+        }
+
+        private string GenerateOtp()
+        {
+            const string digits = "0123456789";
+            var random = new Random();
+            var otp = new StringBuilder(6);
+            for (int i = 0; i < 6; i++)
+            {
+                otp.Append(digits[random.Next(digits.Length)]);
+            }
+            return otp.ToString();
         }
     }
 }

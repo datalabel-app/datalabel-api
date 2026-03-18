@@ -35,6 +35,15 @@ namespace DataLabeling.BLL
             return await SendEmailAsync(recipientEmail, fullName, subject, htmlContent, plainTextContent);
         }
 
+        public async Task<bool> SendForgotPasswordOtpEmailAsync(string recipientEmail, string fullName, string otp)
+        {
+            var subject = "Mã OTP đặt lại mật khẩu - Data Labeling";
+            var htmlContent = EmailTemplate.GetForgotPasswordOtpEmail(fullName, otp);
+            var plainTextContent = $"Xin chào {fullName},\n\nMã OTP của bạn là: {otp}\n\nMã này có hiệu lực trong 5 phút.\n\nNếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.";
+
+            return await SendEmailAsync(recipientEmail, fullName, subject, htmlContent, plainTextContent);
+        }
+
         public async Task<bool> SendEmailAsync(string recipientEmail, string recipientName, string subject, string htmlContent, string plainTextContent)
         {
             try
