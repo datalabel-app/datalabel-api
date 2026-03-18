@@ -9,5 +9,7 @@ namespace DataLabeling.API.DTOs
         public int? ReviewerId { get; set; }
 
         public string? Status { get; set; }
+
+        public string? DescriptionError { get; set; }
     }
 }
