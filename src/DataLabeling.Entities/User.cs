@@ -15,11 +15,12 @@ namespace DataLabeling.Entities
         public string Email { get; set; }
 
         public string Password { get; set; }
-        public bool IsChangePassword { get; set; } = false;
 
         public UserRole Role { get; set; }
 
         public string Status { get; set; }
+
+        public bool IsChangePassword { get; set; } = false;
 
         public DateTime CreatedAt { get; set; }
 
@@ -28,5 +29,11 @@ namespace DataLabeling.Entities
         public ICollection<Project> Projects { get; set; } = new List<Project>();
 
         public ICollection<Task> AssignedTasks { get; set; } = new List<Task>();
+
+        public ICollection<Token> Token { get; set; } = new List<Token>();
+
+        public ICollection<TaskErrorHistory> ReviewedErrors { get; set; } = new List<TaskErrorHistory>();
+
+        public ICollection<Label> CreatedLabels { get; set; } = new List<Label>();
     }
 }

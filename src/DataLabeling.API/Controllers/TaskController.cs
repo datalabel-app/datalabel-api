@@ -1,7 +1,10 @@
 ﻿using DataLabeling.API.DTOs;
+using DataLabeling.API.Hubs;
 using DataLabeling.DAL.Data;
+using DataLabeling.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
@@ -12,10 +15,12 @@ namespace DataLabeling.API.Controllers
     public class TaskController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IHubContext<NotificationHub> _hub;
 
-        public TaskController(ApplicationDbContext context)
+        public TaskController(ApplicationDbContext context, IHubContext<NotificationHub> hub)
         {
             _context = context;
+            _hub = hub;
         }
 
         [HttpGet("round/{roundId}")]
@@ -79,15 +84,22 @@ namespace DataLabeling.API.Controllers
             var task = await _context.Tasks
                 .Include(t => t.DataItem)
                 .Include(t => t.Round)
+                .Include(t => t.Annotations)
                 .FirstOrDefaultAsync(t => t.TaskId == taskId);
 
             if (task == null)
                 return NotFound();
 
+            var annotation = task.Annotations.FirstOrDefault();
+
             return Ok(new
             {
                 task.TaskId,
                 task.Status,
+                task.CreatedAt,
+                task.AnnotatedAt,
+                task.ReviewedAt,
+                task.DescriptionError,
 
                 ItemId = task.DataItemId,
 
@@ -99,6 +111,17 @@ namespace DataLabeling.API.Controllers
                     task.Round.RoundNumber,
                     task.Round.ShapeType,
                     task.Round.Description
+                },
+
+                Annotation = annotation == null ? null : new
+                {
+                    annotation.AnnotationId,
+                    annotation.LabelId,
+                    annotation.ShapeType,
+                    annotation.Coordinates,
+                    annotation.Classification,
+                    annotation.AnnotatorId,
+                    annotation.CreatedAt
                 }
             });
         }
@@ -111,7 +134,54 @@ namespace DataLabeling.API.Controllers
             );
 
             var tasks = await _context.Tasks
+                .Include(t => t.DataItem)
+                    .ThenInclude(d => d.Dataset)
+                .Include(t => t.Round)
                 .Where(t => t.AnnotatorId == userId)
+                 .OrderByDescending(t => t.CreatedAt)
+                .Select(t => new
+                {
+                    t.TaskId,
+                    t.DataItemId,
+                    t.Status,
+                    t.CreatedAt,
+
+                    FileUrl = t.DataItem.FileUrl,
+
+                    Dataset = new
+                    {
+                        t.DataItem.Dataset.DatasetId,
+                        t.DataItem.Dataset.DatasetName,
+                        t.DataItem.Dataset.CreatedAt
+                    },
+
+                    Round = new
+                    {
+                        t.Round.RoundId,
+                        t.Round.RoundNumber,
+                        t.Round.ShapeType,
+                        t.Round.Description,
+                        t.Round.Status,
+                        t.Round.CreatedAt
+                    }
+                })
+                .ToListAsync();
+
+            return Ok(tasks);
+        }
+
+        [HttpGet("my-reviewer-tasks")]
+        public async Task<IActionResult> GetMyReviewerTasks()
+        {
+            var userId = int.Parse(
+              User.FindFirst(ClaimTypes.NameIdentifier)!.Value
+          );
+
+            var tasks = await _context.Tasks
+                .Include(t => t.DataItem)
+                .Include(t => t.Round)
+                .Where(t => t.ReviewerId == userId)
+                 .OrderByDescending(t => t.CreatedAt)
                 .Select(t => new
                 {
                     t.TaskId,
@@ -136,32 +206,19 @@ namespace DataLabeling.API.Controllers
             return Ok(tasks);
         }
 
-        [HttpGet("my-reviewer-tasks")]
-        public async Task<IActionResult> GetMyReviewerTasks()
-        {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-
-            var tasks = await _context.Tasks
-                .Where(t => t.ReviewerId == userId)
-                .Select(t => new
-                {
-                    t.TaskId,
-                    t.DataItemId,
-                    FileUrl = t.DataItem.FileUrl,
-                    t.RoundId,
-                    RoundNumber = t.Round.RoundNumber,
-                    Status = t.Status.ToString(),
-                    t.CreatedAt
-                })
-                .ToListAsync();
-
-            return Ok(tasks);
-        }
-
         [HttpPost]
         public async Task<ActionResult<TaskResponse>> Create(CreateTaskRequest dto)
         {
-            var task = new Entities.Task
+
+            var exists = await _context.Tasks
+            .AnyAsync(t => t.DataItemId == dto.DataItemId && t.RoundId == dto.RoundId);
+
+            if (exists)
+            {
+                return BadRequest("Task for this DataItem and Round already exists.");
+            }
+
+            var task = new DataLabeling.Entities.Task
             {
                 DataItemId = dto.DataItemId,
                 RoundId = dto.RoundId,
@@ -192,10 +249,12 @@ namespace DataLabeling.API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, UpdateTaskRequest dto)
         {
-            var task = await _context.Tasks.FindAsync(id);
+            var task = await _context.Tasks
+                .Include(t => t.DataItem)
+                .FirstOrDefaultAsync(t => t.TaskId == id);
 
             if (task == null)
-                return NotFound();
+                return NotFound("Task not found");
 
             if (dto.AnnotatorId != null)
                 task.AnnotatorId = dto.AnnotatorId;
@@ -205,21 +264,73 @@ namespace DataLabeling.API.Controllers
 
             if (!string.IsNullOrEmpty(dto.Status))
             {
-                if (Enum.TryParse<DataLabeling.Entities.TaskStatus>(dto.Status, true, out var status))
+                if (Enum.TryParse<Entities.TaskStatus>(dto.Status, true, out var status))
                 {
                     task.Status = status;
 
-                    if (status == DataLabeling.Entities.TaskStatus.Annotating)
-                        task.AnnotatedAt = DateTime.UtcNow;
+                    switch (status)
+                    {
+                        case Entities.TaskStatus.Annotating:
+                            task.AnnotatedAt = DateTime.UtcNow;
 
-                    if (status == DataLabeling.Entities.TaskStatus.Approved)
-                        task.ReviewedAt = DateTime.UtcNow;
+                            if (task.DataItem != null)
+                                task.DataItem.Status = "Annotating";
+                            break;
+
+                        case Entities.TaskStatus.Approved:
+                            task.ReviewedAt = DateTime.UtcNow;
+
+                            if (task.DataItem != null)
+                                task.DataItem.Status = "Approved";
+                            break;
+                        case Entities.TaskStatus.Rejected:
+                            task.ReviewedAt = DateTime.UtcNow;
+
+                            if (!string.IsNullOrEmpty(dto.DescriptionError))
+                                task.DescriptionError = dto.DescriptionError;
+
+                            if (task.DataItem != null)
+                                task.DataItem.Status = "Rejected";
+
+                            var errorHistory = new TaskErrorHistory
+                            {
+                                TaskId = task.TaskId,
+                                ItemId = task.DataItemId,
+                                ReviewerId = task.ReviewerId ?? 0,
+                                ErrorMessage = dto.DescriptionError ?? "Unknown error",
+                                CreatedAt = DateTime.UtcNow
+                            };
+
+                            _context.TaskErrorHistories.Add(errorHistory);
+
+                            if (task.AnnotatorId != null)
+                            {
+                                await _hub.Clients
+                                    .Group(task.AnnotatorId.ToString())
+                                    .SendAsync("ReceiveNotification", new
+                                    {
+                                        message = "The task has been rejected; please resubmit!",
+                                        taskId = task.TaskId,
+                                        error = dto.DescriptionError
+                                    });
+                            }
+
+                            break;
+                    }
                 }
             }
 
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return Ok(new
+            {
+                task.TaskId,
+                task.Status,
+                task.AnnotatedAt,
+                task.ReviewedAt,
+                task.DescriptionError,
+                dataItemStatus = task.DataItem?.Status
+            });
         }
 
         [HttpDelete("{id}")]

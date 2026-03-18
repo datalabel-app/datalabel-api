@@ -25,50 +25,6 @@ namespace DataLabeling.API.Controllers
             _emailService = emailService;
         }
 
-        [Authorize(Roles = nameof(UserRole.Admin))]
-        [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterRequest request)
-        {
-            var emailExists = await _context.Users
-                .AnyAsync(x => x.Email == request.Email);
-
-            if (emailExists)
-                return BadRequest("Email already exists");
-
-            string plainPassword = GenerateRandomPassword();
-            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(plainPassword);
-
-            var user = new User
-            {
-                FullName = request.FullName,
-                Email = request.Email,
-                Password = hashedPassword,
-                Role = request.Role ?? UserRole.Annotator,
-                Status = "Active",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            _ = Task.Run(async () =>
-            {
-                await _emailService.SendAccountCreationEmailAsync(
-                    user.Email,
-                    user.FullName,
-                    plainPassword
-                );
-            });
-
-            return Ok(new
-            {
-                message = "Register success",
-                userId = user.UserId,
-                email = user.Email,
-                role = user.Role
-            });
-        }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
@@ -102,21 +58,6 @@ namespace DataLabeling.API.Controllers
                 .ToListAsync();
 
             return Ok(users);
-        }
-
-
-        private static string GenerateRandomPassword(int length = 6)
-        {
-            const string validChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-            char[] password = new char[length];
-            byte[] randomBytes = new byte[length];
-            using var rdb = RandomNumberGenerator.Create();
-            rdb.GetBytes(randomBytes);
-            for (int i = 0; i < length; i++)
-            {
-                password[i] = validChars[randomBytes[i] % validChars.Length];
-            }
-            return new string(password);
         }
 
         [Authorize]
