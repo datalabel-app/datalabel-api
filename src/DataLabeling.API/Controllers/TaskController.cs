@@ -130,7 +130,7 @@ namespace DataLabeling.API.Controllers
         public async Task<IActionResult> GetMyAnnotatorTasks()
         {
             var userId = int.Parse(
-                User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value
+                User.FindFirst(ClaimTypes.NameIdentifier)!.Value
             );
 
             var tasks = await _context.Tasks
@@ -174,7 +174,7 @@ namespace DataLabeling.API.Controllers
         public async Task<IActionResult> GetMyReviewerTasks()
         {
             var userId = int.Parse(
-              User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value
+              User.FindFirst(ClaimTypes.NameIdentifier)!.Value
           );
 
             var tasks = await _context.Tasks
@@ -264,26 +264,26 @@ namespace DataLabeling.API.Controllers
 
             if (!string.IsNullOrEmpty(dto.Status))
             {
-                if (Enum.TryParse<DataLabeling.Entities.TaskStatus>(dto.Status, true, out var status))
+                if (Enum.TryParse<Entities.TaskStatus>(dto.Status, true, out var status))
                 {
                     task.Status = status;
 
                     switch (status)
                     {
-                        case DataLabeling.Entities.TaskStatus.Annotating:
+                        case Entities.TaskStatus.Annotating:
                             task.AnnotatedAt = DateTime.UtcNow;
 
                             if (task.DataItem != null)
                                 task.DataItem.Status = "Annotating";
                             break;
 
-                        case DataLabeling.Entities.TaskStatus.Approved:
+                        case Entities.TaskStatus.Approved:
                             task.ReviewedAt = DateTime.UtcNow;
 
                             if (task.DataItem != null)
                                 task.DataItem.Status = "Approved";
                             break;
-                        case DataLabeling.Entities.TaskStatus.Rejected:
+                        case Entities.TaskStatus.Rejected:
                             task.ReviewedAt = DateTime.UtcNow;
 
                             if (!string.IsNullOrEmpty(dto.DescriptionError))
