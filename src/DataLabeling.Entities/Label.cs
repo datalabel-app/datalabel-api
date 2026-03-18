@@ -17,7 +17,13 @@ namespace DataLabeling.Entities
 
         public string LabelName { get; set; } = string.Empty;
 
+        public LabelStatus LabelStatus { get; set; } = LabelStatus.Approved;
+
         public string? Description { get; set; }
+
+        public int? AnnotatorId { get; set; }
+
+        public User? Annotator { get; set; }
 
         public DatasetRound Round { get; set; } = null!;
     }

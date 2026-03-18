@@ -1,7 +1,9 @@
 ﻿using DataLabeling.API.DTOs;
+using DataLabeling.API.Hubs;
 using DataLabeling.DAL.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
@@ -12,10 +14,12 @@ namespace DataLabeling.API.Controllers
     public class TaskController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IHubContext<NotificationHub> _hub;
 
-        public TaskController(ApplicationDbContext context)
+        public TaskController(ApplicationDbContext context, IHubContext<NotificationHub> hub)
         {
             _context = context;
+            _hub = hub;
         }
 
         [HttpGet("round/{roundId}")]
@@ -79,15 +83,22 @@ namespace DataLabeling.API.Controllers
             var task = await _context.Tasks
                 .Include(t => t.DataItem)
                 .Include(t => t.Round)
+                .Include(t => t.Annotations)
                 .FirstOrDefaultAsync(t => t.TaskId == taskId);
 
             if (task == null)
                 return NotFound();
 
+            var annotation = task.Annotations.FirstOrDefault();
+
             return Ok(new
             {
                 task.TaskId,
                 task.Status,
+                task.CreatedAt,
+                task.AnnotatedAt,
+                task.ReviewedAt,
+                task.DescriptionError,
 
                 ItemId = task.DataItemId,
 
@@ -99,6 +110,17 @@ namespace DataLabeling.API.Controllers
                     task.Round.RoundNumber,
                     task.Round.ShapeType,
                     task.Round.Description
+                },
+
+                Annotation = annotation == null ? null : new
+                {
+                    annotation.AnnotationId,
+                    annotation.LabelId,
+                    annotation.ShapeType,
+                    annotation.Coordinates,
+                    annotation.Classification,
+                    annotation.AnnotatorId,
+                    annotation.CreatedAt
                 }
             });
         }

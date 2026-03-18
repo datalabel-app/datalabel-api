@@ -26,5 +26,6 @@ namespace DataLabeling.Entities
         public ICollection<Task> Tasks { get; set; } = new List<Task>();
 
         public ICollection<Annotation> Annotations { get; set; } = new List<Annotation>();
+        public ICollection<TaskErrorHistory> ErrorHistories { get; set; } = new List<TaskErrorHistory>();
     }
 }
