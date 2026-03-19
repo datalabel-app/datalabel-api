@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "7B16DaA6YOY=",
+  "dgSpecHash": "rLGkJ0kmzdY=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Admin\\Source\\Repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj",
+  "projectFilePath": "C:\\Users\\Admin\\source\\repos\\datalabel-api\\src\\DataLabeling.Entities\\DataLabeling.Entities.csproj",
   "expectedPackageFiles": [],
   "logs": []
 }

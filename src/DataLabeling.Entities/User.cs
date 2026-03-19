@@ -16,10 +16,20 @@ namespace DataLabeling.Entities
 
         public string Status { get; set; }
 
+        public bool IsChangePassword { get; set; } = false;
+
         public DateTime CreatedAt { get; set; }  
 
         public DateTime UpdatedAt { get; set; }
 
         public ICollection<Project> Projects { get; set; } = new List<Project>();
+
+        public ICollection<Task> AssignedTasks { get; set; } = new List<Task>();
+
+        public ICollection<Token> Token { get; set; } = new List<Token>();
+
+        public ICollection<TaskErrorHistory> ReviewedErrors { get; set; } = new List<TaskErrorHistory>();
+
+        public ICollection<Label> CreatedLabels { get; set; } = new List<Label>();
     }
 }
