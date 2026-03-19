@@ -75,6 +75,7 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins(
+                "https://datalabel-three.vercel.app",
                 "http://localhost:5173",
                 "http://localhost:3000"
             )
