@@ -1,16 +1,12 @@
 ﻿using DataLabeling.Entities;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DataLabeling.DAL.Data
 {
     public class ApplicationDbContext : DbContext
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        : base(options)
         {
         }
 
@@ -21,7 +17,7 @@ namespace DataLabeling.DAL.Data
         public DbSet<Label> Labels { get; set; }
         public DbSet<DataItem> DataItems { get; set; }
         public DbSet<Annotation> Annotations { get; set; }
-        public DbSet<Entities.Task> Tasks { get; set; }
+        public DbSet<DataLabeling.Entities.Task> Tasks { get; set; }
 
         public DbSet<Token> Token { get; set; }
 
@@ -185,7 +181,7 @@ namespace DataLabeling.DAL.Data
                       .HasForeignKey(e => e.LabelId);
             });
 
-            modelBuilder.Entity<Entities.Task>(entity =>
+            modelBuilder.Entity<DataLabeling.Entities.Task>(entity =>
             {
                 entity.ToTable("tasks");
 
