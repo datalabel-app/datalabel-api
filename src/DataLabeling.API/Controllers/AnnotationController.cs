@@ -33,6 +33,12 @@ public class AnnotationController : ControllerBase
         if (task == null)
             return BadRequest("Task not found");
 
+        var dataItem = await _context.DataItems
+            .FirstOrDefaultAsync(x => x.ItemId == task.DataItemId);
+
+        if (dataItem == null)
+            return BadRequest("DataItem not found");
+
         var annotation = new Annotation
         {
             TaskId = task.TaskId,
@@ -48,15 +54,21 @@ public class AnnotationController : ControllerBase
 
         _context.Annotations.Add(annotation);
 
+
         task.Status = DataLabeling.Entities.TaskStatus.Annotating;
         task.AnnotatedAt = DateTime.UtcNow;
+
+
+        dataItem.Status = "Pending";
 
         await _context.SaveChangesAsync();
 
         return Ok(new
         {
             message = "Classification created",
-            annotationId = annotation.AnnotationId
+            annotationId = annotation.AnnotationId,
+            taskStatus = task.Status,
+            dataItemStatus = dataItem.Status
         });
     }
 
@@ -80,6 +92,12 @@ public class AnnotationController : ControllerBase
         if (task.AnnotatorId != annotatorId)
             return Forbid("You are not assigned to this task");
 
+        var dataItem = await _context.DataItems
+            .FirstOrDefaultAsync(x => x.ItemId == dto.ItemId);
+
+        if (dataItem == null)
+            return BadRequest("DataItem not found");
+
         var annotation = new Annotation
         {
             TaskId = dto.TaskId,
@@ -95,8 +113,12 @@ public class AnnotationController : ControllerBase
 
         _context.Annotations.Add(annotation);
 
+
         task.Status = DataLabeling.Entities.TaskStatus.Annotating;
         task.AnnotatedAt = DateTime.UtcNow;
+
+
+        dataItem.Status = "Pending";
 
         await _context.SaveChangesAsync();
 
@@ -142,4 +164,74 @@ public class AnnotationController : ControllerBase
         return Ok(annotations);
     }
 
+    [HttpPut("{annotationId}")]
+    public async Task<IActionResult> UpdateAnnotation(int annotationId, UpdateAnnotationRequest dto)
+    {
+        var annotation = await _context.Annotations
+            .Include(a => a.Task)
+            .FirstOrDefaultAsync(a => a.AnnotationId == annotationId);
+
+        if (annotation == null)
+            return NotFound("Annotation not found");
+
+        var dataItem = await _context.DataItems
+            .FirstOrDefaultAsync(x => x.ItemId == annotation.ItemId);
+
+
+        if (dto.LabelId.HasValue)
+            annotation.LabelId = dto.LabelId.Value;
+
+        if (!string.IsNullOrEmpty(dto.Coordinates))
+            annotation.Coordinates = dto.Coordinates;
+
+        if (!string.IsNullOrEmpty(dto.Classification))
+            annotation.Classification = dto.Classification;
+
+        annotation.CreatedAt = DateTime.UtcNow;
+
+
+        if (annotation.Task != null)
+        {
+            annotation.Task.Status = DataLabeling.Entities.TaskStatus.Annotating;
+
+            annotation.Task.AnnotatedAt = DateTime.UtcNow;
+
+            annotation.Task.ReviewedAt = null;
+            annotation.Task.DescriptionError = null;
+        }
+
+
+        if (dataItem != null)
+        {
+            dataItem.Status = "Annotating";
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            annotation.AnnotationId,
+            annotation.LabelId,
+            annotation.Coordinates,
+            annotation.Classification,
+            annotation.CreatedAt,
+
+            taskStatus = annotation.Task?.Status,
+            dataItemStatus = dataItem?.Status
+        });
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteAnnotation(int id)
+    {
+        var annotation = await _context.Annotations.FindAsync(id);
+
+        if (annotation == null)
+            return NotFound();
+
+        _context.Annotations.Remove(annotation);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
 }
