@@ -74,7 +74,21 @@ namespace DataLabeling.API.Controllers
             if (dataset == null)
                 return NotFound("Dataset not found");
 
-            return Ok(dataset);
+            var result = new DatasetDetailDto
+            {
+                DatasetId = dataset.DatasetId,
+                DatasetName = dataset.DatasetName,
+
+                Status = dataset.Status,
+
+                Project = new ProjectDto
+                {
+                    ProjectId = dataset.Project.ProjectId,
+                    ProjectName = dataset.Project.ProjectName
+                },
+            };
+
+            return Ok(result);
         }
 
         [HttpGet("project/{projectId}")]
@@ -90,7 +104,7 @@ namespace DataLabeling.API.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateDataset(int id, [FromBody] Dataset request)
+        public async Task<IActionResult> UpdateDataset(int id, UpdateDatasetRequest request)
         {
             var dataset = await _context.Datasets.FindAsync(id);
 
