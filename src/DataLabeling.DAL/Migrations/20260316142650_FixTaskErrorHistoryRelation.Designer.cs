@@ -3,6 +3,7 @@ using System;
 using DataLabeling.DAL.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DataLabeling.DAL.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260316142650_FixTaskErrorHistoryRelation")]
+    partial class FixTaskErrorHistoryRelation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -199,10 +202,6 @@ namespace DataLabeling.DAL.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("LabelId"));
 
-                    b.Property<int?>("AnnotatorId")
-                        .HasColumnType("integer")
-                        .HasColumnName("annotator_id");
-
                     b.Property<string>("Description")
                         .HasColumnType("text")
                         .HasColumnName("description");
@@ -213,25 +212,13 @@ namespace DataLabeling.DAL.Migrations
                         .HasColumnType("character varying(255)")
                         .HasColumnName("label_name");
 
-                    b.Property<int>("LabelStatus")
-                        .HasMaxLength(50)
-                        .HasColumnType("integer")
-                        .HasColumnName("label_status");
-
                     b.Property<int>("RoundId")
                         .HasColumnType("integer")
                         .HasColumnName("round_id");
 
-                    b.Property<int?>("UserId")
-                        .HasColumnType("integer");
-
                     b.HasKey("LabelId");
 
-                    b.HasIndex("AnnotatorId");
-
                     b.HasIndex("RoundId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("labels", (string)null);
                 });
@@ -560,22 +547,11 @@ namespace DataLabeling.DAL.Migrations
 
             modelBuilder.Entity("DataLabeling.Entities.Label", b =>
                 {
-                    b.HasOne("DataLabeling.Entities.User", "Annotator")
-                        .WithMany()
-                        .HasForeignKey("AnnotatorId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("DataLabeling.Entities.DatasetRound", "Round")
                         .WithMany("Labels")
                         .HasForeignKey("RoundId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("DataLabeling.Entities.User", null)
-                        .WithMany("CreatedLabels")
-                        .HasForeignKey("UserId");
-
-                    b.Navigation("Annotator");
 
                     b.Navigation("Round");
                 });
@@ -715,8 +691,6 @@ namespace DataLabeling.DAL.Migrations
             modelBuilder.Entity("DataLabeling.Entities.User", b =>
                 {
                     b.Navigation("AssignedTasks");
-
-                    b.Navigation("CreatedLabels");
 
                     b.Navigation("Projects");
 

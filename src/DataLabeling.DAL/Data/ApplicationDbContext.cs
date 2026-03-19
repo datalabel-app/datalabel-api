@@ -1,30 +1,31 @@
 ﻿using DataLabeling.Entities;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DataLabeling.DAL.Data
 {
     public class ApplicationDbContext : DbContext
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        : base(options)
         {
         }
 
         public DbSet<User> Users { get; set; }
         public DbSet<Project> Projects { get; set; }
-        public DbSet<Label> Labels { get; set; }
         public DbSet<Dataset> Datasets { get; set; }
         public DbSet<DatasetRound> DatasetRounds { get; set; }
+        public DbSet<Label> Labels { get; set; }
         public DbSet<DataItem> DataItems { get; set; }
         public DbSet<Annotation> Annotations { get; set; }
-        public DbSet<Entities.Task> Tasks { get; set; }
+        public DbSet<DataLabeling.Entities.Task> Tasks { get; set; }
+
+        public DbSet<Token> Token { get; set; }
+
+        public DbSet<TaskErrorHistory> TaskErrorHistories { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
             // ======================
             // USER
             // ======================
@@ -47,6 +48,7 @@ namespace DataLabeling.DAL.Data
                       .WithOne(p => p.Manager)
                       .HasForeignKey(p => p.ManagerId)
                       .OnDelete(DeleteBehavior.Cascade);
+
             });
 
             // ======================
@@ -121,6 +123,14 @@ namespace DataLabeling.DAL.Data
                 entity.Property(e => e.RoundId).HasColumnName("round_id");
                 entity.Property(e => e.LabelName).HasColumnName("label_name").HasMaxLength(255);
                 entity.Property(e => e.Description).HasColumnName("description");
+                entity.Property(e => e.LabelStatus).HasColumnName("label_status").HasMaxLength(50);
+
+                entity.Property(e => e.AnnotatorId).HasColumnName("annotator_id");
+
+                entity.HasOne(e => e.Annotator)
+                      .WithMany()
+                      .HasForeignKey(e => e.AnnotatorId)
+                      .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasOne(e => e.Round)
                       .WithMany(r => r.Labels)
@@ -142,6 +152,7 @@ namespace DataLabeling.DAL.Data
                 entity.Property(e => e.FileUrl).HasColumnName("file_url").HasMaxLength(500);
                 entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50);
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+
 
             });
 
@@ -170,10 +181,7 @@ namespace DataLabeling.DAL.Data
                       .HasForeignKey(e => e.LabelId);
             });
 
-            // ======================
-            // TASK
-            // ======================
-            modelBuilder.Entity<Entities.Task>(entity =>
+            modelBuilder.Entity<DataLabeling.Entities.Task>(entity =>
             {
                 entity.ToTable("tasks");
 
@@ -188,7 +196,7 @@ namespace DataLabeling.DAL.Data
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at");
                 entity.Property(e => e.AnnotatedAt).HasColumnName("annotated_at");
                 entity.Property(e => e.ReviewedAt).HasColumnName("reviewed_at");
-
+                entity.Property(e => e.DescriptionError).HasColumnName("description_error");
                 entity.HasOne(e => e.DataItem)
                       .WithMany(d => d.Tasks)
                       .HasForeignKey(e => e.DataItemId)
@@ -209,6 +217,67 @@ namespace DataLabeling.DAL.Data
                       .HasForeignKey(e => e.ReviewerId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
+
+            modelBuilder.Entity<Token>(entity =>
+            {
+                entity.ToTable("tokens");
+
+                entity.HasKey(e => e.TokenId);
+
+                entity.Property(e => e.TokenId).HasColumnName("token_id");
+                entity.Property(e => e.UserId).HasColumnName("user_id");
+                entity.Property(e => e.TokenType).HasColumnName("token_type");
+                entity.Property(e => e.TokenValue).HasColumnName("token_value");
+                entity.Property(e => e.Expired).HasColumnName("expired");
+                entity.Property(e => e.IsUsed).HasColumnName("is_used");
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+
+            });
+
+
+            modelBuilder.Entity<TaskErrorHistory>(entity =>
+            {
+                entity.ToTable("task_error_histories");
+
+                entity.HasKey(e => e.ErrorId);
+
+                entity.Property(e => e.ErrorId)
+                    .HasColumnName("error_id");
+
+                entity.Property(e => e.TaskId)
+                    .HasColumnName("task_id");
+
+                entity.Property(e => e.ItemId)
+                    .HasColumnName("item_id");
+
+                entity.Property(e => e.ReviewerId)
+                    .HasColumnName("reviewer_id");
+
+                entity.Property(e => e.ErrorMessage)
+                    .HasColumnName("error_message")
+                    .HasMaxLength(1000);
+
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnName("created_at");
+
+                entity.HasOne(e => e.DataItem)
+                    .WithMany()
+                    .HasForeignKey(e => e.ItemId)
+                    .HasConstraintName("fk_task_error_histories_data_items");
+
+                entity.HasOne(e => e.Task)
+                    .WithMany(t => t.ErrorHistories)
+                    .HasForeignKey(e => e.TaskId)
+                    .HasConstraintName("fk_task_error_histories_tasks");
+
+                entity.HasOne(e => e.Reviewer)
+                    .WithMany()
+                    .HasForeignKey(e => e.ReviewerId)
+                    .HasConstraintName("fk_task_error_histories_users");
+            });
+
         }
     }
 }

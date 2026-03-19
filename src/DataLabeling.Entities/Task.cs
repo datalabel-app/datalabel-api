@@ -21,6 +21,8 @@ namespace DataLabeling.Entities
 
         public int? ReviewerId { get; set; }
 
+        public string? DescriptionError { get; set; } = string.Empty;
+
         public TaskStatus Status { get; set; } = TaskStatus.Pending;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -38,5 +40,7 @@ namespace DataLabeling.Entities
         public User? Reviewer { get; set; }
 
         public ICollection<Annotation> Annotations { get; set; } = new List<Annotation>();
+
+        public ICollection<TaskErrorHistory> ErrorHistories { get; set; } = new List<TaskErrorHistory>();
     }
 }

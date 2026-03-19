@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace DataLabeling.Entities
 {
-    public enum DataItemStatus
+    public enum LabelStatus
     {
         Pending = 0,
-        Done = 1,
-
+        Approved = 1,
+        Rejected = 2
     }
 }

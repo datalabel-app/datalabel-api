@@ -1,4 +1,5 @@
-﻿
+﻿using DataLabeling.Entities;
+
 namespace DataLabeling.API.DTOs
 {
     public class DatasetRoundResponse
@@ -14,5 +15,7 @@ namespace DataLabeling.API.DTOs
         public string Status { get; set; }
 
         public DateTime CreatedAt { get; set; }
+
+        public ShapeType ShapeType { get; set; } = ShapeType.Bbox;
     }
 }
