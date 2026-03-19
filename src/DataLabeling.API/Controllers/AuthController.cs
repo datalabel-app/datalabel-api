@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using OfficeOpenXml;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -76,12 +77,137 @@ namespace DataLabeling.API.Controllers
             });
         }
 
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("export-template")]
+        public IActionResult ExportTemplate()
+        {
+            ExcelPackage.License.SetNonCommercialPersonal("Admin");
+
+            using var package = new ExcelPackage();
+            var sheet = package.Workbook.Worksheets.Add("Users");
+
+            sheet.Cells[1, 1].Value = "FullName";
+            sheet.Cells[1, 2].Value = "Email";
+            sheet.Cells[1, 3].Value = "Role";
+
+            sheet.Cells[2, 1].Value = "Nguyen Van A";
+            sheet.Cells[2, 2].Value = "a@gmail.com";
+            sheet.Cells[2, 3].Value = "Annotator";
+
+            sheet.Cells[3, 1].Value = "Tran Thi B";
+            sheet.Cells[3, 2].Value = "b@gmail.com";
+            sheet.Cells[3, 3].Value = "Manager";
+
+            var stream = new MemoryStream(package.GetAsByteArray());
+
+            return File(stream,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "UserTemplate.xlsx");
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPost("import-users")]
+        public async Task<IActionResult> ImportUsers(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("File is empty");
+
+            var usersCreated = new List<object>();
+            var errors = new List<string>();
+
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+
+            using var package = new OfficeOpenXml.ExcelPackage(stream);
+            var sheet = package.Workbook.Worksheets[0];
+
+            int rowCount = sheet.Dimension.Rows;
+
+            for (int row = 2; row <= rowCount; row++)
+            {
+                try
+                {
+                    var fullName = sheet.Cells[row, 1].Text.Trim();
+                    var email = sheet.Cells[row, 2].Text.Trim();
+                    var roleText = sheet.Cells[row, 3].Text.Trim();
+
+                    if (string.IsNullOrEmpty(email))
+                    {
+                        errors.Add($"Row {row}: Email is required");
+                        continue;
+                    }
+
+                    var emailExists = await _context.Users
+                        .AnyAsync(x => x.Email == email);
+
+                    if (emailExists)
+                    {
+                        errors.Add($"Row {row}: Email already exists");
+                        continue;
+                    }
+
+                    UserRole role = UserRole.Annotator;
+                    if (!string.IsNullOrEmpty(roleText) &&
+                        Enum.TryParse(roleText, out UserRole parsedRole))
+                    {
+                        role = parsedRole;
+                    }
+
+                    string plainPassword = GenerateRandomPassword();
+                    string hashedPassword = BCrypt.Net.BCrypt.HashPassword(plainPassword);
+
+                    var user = new User
+                    {
+                        FullName = fullName,
+                        Email = email,
+                        Password = hashedPassword,
+                        Role = role,
+                        Status = "Active",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    _context.Users.Add(user);
+                    await _context.SaveChangesAsync();
+
+                    _ = System.Threading.Tasks.Task.Run(async () =>
+                    {
+                        await _emailService.SendAccountCreationEmailAsync(
+                            user.Email,
+                            user.FullName,
+                            plainPassword
+                        );
+                    });
+
+                    usersCreated.Add(new
+                    {
+                        email = user.Email,
+                        role = user.Role
+                    });
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Row {row}: {ex.Message}");
+                }
+            }
+
+            return Ok(new
+            {
+                message = "Import completed",
+                successCount = usersCreated.Count,
+                errorCount = errors.Count,
+                usersCreated,
+                errors
+            });
+        }
+
         [AllowAnonymous]
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
         {
             var user = await _context.Users
                 .FirstOrDefaultAsync(x => x.Email == request.Email);
+            if (user!.Status != "Active") return BadRequest("Your account banned");
 
             if (user == null)
                 return BadRequest("Email does not exist");
@@ -202,6 +328,8 @@ namespace DataLabeling.API.Controllers
 
             if (user == null)
                 return Unauthorized("Invalid email or password");
+
+            if (user!.Status != "Active") return BadRequest("Your account banned");
 
             bool isPasswordValid = BCrypt.Net.BCrypt.Verify(
                 request.Password,
