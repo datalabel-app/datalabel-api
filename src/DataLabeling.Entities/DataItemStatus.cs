@@ -9,8 +9,7 @@ namespace DataLabeling.Entities
     public enum DataItemStatus
     {
         Pending = 0,
-        InProgress = 1,
-        Labeled = 2,
-        Rejected = 3
+        Done = 1,
+
     }
 }
