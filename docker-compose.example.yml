@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   # PostgreSQL Database (Local fallback - chỉ chạy khi cần)
   postgres:
@@ -11,7 +9,7 @@ services:
     environment:
       POSTGRES_DB: datalabel_db
       POSTGRES_USER: datalabel_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-301199@@Kg99}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -37,7 +35,7 @@ services:
         required: false # Chỉ depend khi postgres được start
     environment:
       # Database connection
-      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING:-Host=dpg-d6gha5hdrdic73c6mhf0-a.singapore-postgres.render.com;Port=5432;Database=datalabel_db;Username=datalabel_db_user;Password=haiLp4WEY9w0c6E2U3jdVQ1pi0QA51JZ;SSL Mode=Require;Trust Server Certificate=true}
+      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
 
       # JWT settings
       Jwt__Key: ${JWT_KEY}

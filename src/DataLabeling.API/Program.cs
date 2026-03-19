@@ -46,7 +46,7 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key),
 
-        NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier 
+        NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier
     };
 
     options.Events = new JwtBearerEvents
@@ -135,11 +135,11 @@ using (var scope = app.Services.CreateScope())
 }
 
 // MIDDLEWARE
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// if (app.Environment.IsDevelopment())
+// {
+app.UseSwagger();
+app.UseSwaggerUI();
+// }
 
 app.UseCors("AllowFrontend");
 
