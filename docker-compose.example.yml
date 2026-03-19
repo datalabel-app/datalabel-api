@@ -1,0 +1,99 @@
+services:
+  # PostgreSQL Database (Local fallback - chỉ chạy khi cần)
+  postgres:
+    image: postgres:16-alpine
+    container_name: datalabel-postgres
+    restart: unless-stopped
+    profiles:
+      - local-db # Chỉ chạy khi: docker-compose --profile local-db up
+    environment:
+      POSTGRES_DB: datalabel_db
+      POSTGRES_USER: datalabel_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - datalabel-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U datalabel_user -d datalabel_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # .NET API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: datalabel-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false # Chỉ depend khi postgres được start
+    environment:
+      # Database connection
+      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
+
+      # JWT settings
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__ExpireMinutes: ${JWT_EXPIREMINUTES}
+
+      # Cloudinary
+      Cloudinary__CloudName: ${CLOUDINARY_CLOUD_NAME}
+      Cloudinary__ApiKey: ${CLOUDINARY_API_KEY}
+      Cloudinary__ApiSecret: ${CLOUDINARY_API_SECRET}
+
+      # Email settings
+      EmailSettings__Username: ${EMAIL_USERNAME}
+      EmailSettings__Password: ${EMAIL_PASSWORD}
+      EmailSettings__Sender: ${EMAIL_SENDER}
+      EmailSettings__ReplyTo: ${EMAIL_REPLYTO}
+
+      # ASP.NET Core
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      ASPNETCORE_URLS: http://+:5000
+    networks:
+      - datalabel-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Caddy Reverse Proxy với Auto HTTPS
+  caddy:
+    image: caddy:2-alpine
+    container_name: datalabel-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL}
+    depends_on:
+      - api
+    networks:
+      - datalabel-network
+
+networks:
+  datalabel-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local
