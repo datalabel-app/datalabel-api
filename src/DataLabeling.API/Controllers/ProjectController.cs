@@ -113,7 +113,7 @@ namespace DataLabeling.API.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateProject(int id, [FromBody] Project request)
+        public async Task<IActionResult> UpdateProject(int id, UpdateProjectRequest request)
         {
             var project = await _context.Projects.FindAsync(id);
 
