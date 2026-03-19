@@ -308,6 +308,7 @@ namespace DataLabeling.API.Controllers
 
             user.Password = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
             user.UpdatedAt = DateTime.UtcNow;
+            user.IsChangePassword = true;
 
             token.IsUsed = true;
             token.UpdatedAt = DateTime.UtcNow;
