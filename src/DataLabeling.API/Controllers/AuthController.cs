@@ -330,7 +330,6 @@ namespace DataLabeling.API.Controllers
             if (user == null)
                 return Unauthorized("Invalid email or password");
 
-            if (user!.Status != "Active") return BadRequest("Your account banned");
 
             bool isPasswordValid = BCrypt.Net.BCrypt.Verify(
                 request.Password,
@@ -339,7 +338,7 @@ namespace DataLabeling.API.Controllers
 
             if (!isPasswordValid)
                 return Unauthorized("Invalid email or password");
-
+            if (user!.Status != "Active") return BadRequest("Your account banned");
             var token = GenerateJwtToken(user);
 
             return Ok(new
