@@ -7,22 +7,80 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using Task = System.Threading.Tasks.Task;
 
 namespace DataLabeling.API.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class UserController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        private readonly EmailService _emailService;
 
         public UserController(ApplicationDbContext context, EmailService emailService)
         {
             _context = context;
-            _emailService = emailService;
+        }
+
+        [HttpPost("change-password-by-email")]
+        public async Task<IActionResult> ChangePassword(ChangePasswordForgotRequest request)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.Email == request.Email);
+
+            if (user == null)
+                return BadRequest("User not found");
+
+            bool isValidPassword = BCrypt.Net.BCrypt.Verify(
+                request.OldPassword,
+                user.Password
+            );
+
+            if (!isValidPassword)
+                return BadRequest("Old password is incorrect");
+
+            user.Password = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            user.UpdatedAt = DateTime.UtcNow;
+
+            user.IsChangePassword = true;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Password changed successfully"
+            });
+        }
+
+        [HttpPost("ban/{id}")]
+        public async Task<IActionResult> BanUser(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+
+            if (user == null)
+                return NotFound("User not found");
+
+            user.Status = "Banned";
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok("User banned");
+        }
+
+        [HttpPost("unban/{id}")]
+        public async Task<IActionResult> UnbanUser(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+
+            if (user == null)
+                return NotFound("User not found");
+
+            user.Status = "Active";
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok("User unbanned");
         }
 
 
@@ -54,7 +112,7 @@ namespace DataLabeling.API.Controllers
         public async Task<IActionResult> GetAnnotators()
         {
             var users = await _context.Users
-                .Where(x => x.Role == UserRole.Annotator)
+                .Where(x => x.Role == UserRole.Annotator && x.Status != "Banned")
                 .ToListAsync();
 
             return Ok(users);
@@ -166,7 +224,7 @@ namespace DataLabeling.API.Controllers
         public async Task<IActionResult> GetReviewers()
         {
             var users = await _context.Users
-                .Where(x => x.Role == UserRole.Reviewer)
+                .Where(x => x.Role == UserRole.Reviewer && x.Status != "Banned")
                 .ToListAsync();
 
             return Ok(users);
