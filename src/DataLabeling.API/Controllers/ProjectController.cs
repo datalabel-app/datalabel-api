@@ -40,6 +40,38 @@ namespace DataLabeling.API.Controllers
             return Ok(project);
         }
 
+        [Authorize]
+        [HttpGet("my-projects")]
+        public async Task<IActionResult> GetMyProjects()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (userIdClaim == null)
+                return Unauthorized(new { message = "Invalid token" });
+
+            if (!int.TryParse(userIdClaim, out int managerId))
+                return Unauthorized(new { message = "Invalid userId" });
+
+            var projects = await _context.Projects
+                .Where(p => p.ManagerId == managerId)
+                .Include(p => p.Manager)
+                .Include(p => p.Datasets)
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
+
+            var response = projects.Select(p => new ProjectResponseAll
+            {
+                ProjectId = p.ProjectId,
+                ProjectName = p.ProjectName,
+                Description = p.Description,
+                CreatedAt = p.CreatedAt,
+                ManagerName = p.Manager != null ? p.Manager.FullName : "",
+                DatasetCount = p.Datasets != null ? p.Datasets.Count : 0
+            });
+
+            return Ok(response);
+        }
+
 
         [HttpGet]
         public async Task<IActionResult> GetAllProjects()
