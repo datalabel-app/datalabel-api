@@ -8,6 +8,8 @@ namespace DataLabeling.Entities
         [Key]
         public int DatasetId { get; set; }
 
+        public int? ParentDatasetId { get; set; }
+
         public int ProjectId { get; set; }
 
         public string DatasetName { get; set; } = string.Empty;
@@ -15,6 +17,10 @@ namespace DataLabeling.Entities
         public string Status { get; set; } = "Active";
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        [ForeignKey("ParentDatasetId")]
+        public Dataset? ParentDataset { get; set; }
+        public ICollection<Dataset> SubDatasets { get; set; } = new List<Dataset>();
 
         public Project Project { get; set; } = null!;
 

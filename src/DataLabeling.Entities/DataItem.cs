@@ -16,7 +16,7 @@ public class DataItem
 
     public Dataset Dataset { get; set; } = null!;
 
-    public ICollection<DataLabeling.Entities.Task> Tasks { get; set; } = new List<DataLabeling.Entities.Task>();
+    public ICollection<TaskDataItem> TaskDataItems { get; set; } = new List<TaskDataItem>();
 
     public ICollection<Annotation> Annotations { get; set; } = new List<Annotation>();
 

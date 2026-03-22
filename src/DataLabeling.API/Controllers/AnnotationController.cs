@@ -20,57 +20,57 @@ public class AnnotationController : ControllerBase
     }
 
 
-    [HttpPost("classification")]
-    public async Task<IActionResult> CreateClassification(CreateAnnotationDto dto)
-    {
-        var userId = int.Parse(
-            User.FindFirst(ClaimTypes.NameIdentifier)!.Value
-        );
+    //[HttpPost("classification")]
+    //public async Task<IActionResult> CreateClassification(CreateAnnotationDto dto)
+    //{
+    //    var userId = int.Parse(
+    //        User.FindFirst(ClaimTypes.NameIdentifier)!.Value
+    //    );
 
-        var task = await _context.Tasks
-            .FirstOrDefaultAsync(x => x.TaskId == dto.TaskId);
+    //    var task = await _context.Tasks
+    //        .FirstOrDefaultAsync(x => x.TaskId == dto.TaskId);
 
-        if (task == null)
-            return BadRequest("Task not found");
+    //    if (task == null)
+    //        return BadRequest("Task not found");
 
-        var dataItem = await _context.DataItems
-            .FirstOrDefaultAsync(x => x.ItemId == task.DataItemId);
+    //    var dataItem = await _context.DataItems
+    //        .FirstOrDefaultAsync(x => x.ItemId == task.DataItemId);
 
-        if (dataItem == null)
-            return BadRequest("DataItem not found");
+    //    if (dataItem == null)
+    //        return BadRequest("DataItem not found");
 
-        var annotation = new Annotation
-        {
-            TaskId = task.TaskId,
-            ItemId = task.DataItemId,
-            LabelId = dto.LabelId,
-            RoundId = dto.RoundId,
-            AnnotatorId = userId,
-            ShapeType = "classification",
-            Coordinates = "",
-            Classification = dto.Classification,
-            CreatedAt = DateTime.UtcNow
-        };
+    //    var annotation = new Annotation
+    //    {
+    //        TaskId = task.TaskId,
+    //        ItemId = task.DataItemId,
+    //        LabelId = dto.LabelId,
+    //        RoundId = dto.RoundId,
+    //        AnnotatorId = userId,
+    //        ShapeType = "classification",
+    //        Coordinates = "",
+    //        Classification = dto.Classification,
+    //        CreatedAt = DateTime.UtcNow
+    //    };
 
-        _context.Annotations.Add(annotation);
-
-
-        task.Status = DataLabeling.Entities.TaskStatus.Annotating;
-        task.AnnotatedAt = DateTime.UtcNow;
+    //    _context.Annotations.Add(annotation);
 
 
-        dataItem.Status = "Pending";
+    //    task.Status = DataLabeling.Entities.TaskStatus.Annotating;
+    //    task.AnnotatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
 
-        return Ok(new
-        {
-            message = "Classification created",
-            annotationId = annotation.AnnotationId,
-            taskStatus = task.Status,
-            dataItemStatus = dataItem.Status
-        });
-    }
+    //    dataItem.Status = "Pending";
+
+    //    await _context.SaveChangesAsync();
+
+    //    return Ok(new
+    //    {
+    //        message = "Classification created",
+    //        annotationId = annotation.AnnotationId,
+    //        taskStatus = task.Status,
+    //        dataItemStatus = dataItem.Status
+    //    });
+    //}
 
 
     [HttpPost("shape")]

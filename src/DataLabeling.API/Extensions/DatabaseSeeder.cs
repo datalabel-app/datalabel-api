@@ -32,7 +32,7 @@ namespace DataLabeling.API.Extensions
             }
             else
             {
-                Console.WriteLine($"ℹAdmin user already exists: {adminEmail}");
+                Console.WriteLine($"Admin user already exists: {adminEmail}");
             }
         }
     }
