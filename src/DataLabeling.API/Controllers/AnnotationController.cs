@@ -112,4 +112,111 @@ public class AnnotationController : ControllerBase
         });
     }
 
+    [HttpPost("shape")]
+    public async Task<ActionResult<AnnotationResponse>> CreateShapeAnnotation(CreateAnnotationRequest dto)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+        if (userIdClaim == null)
+            return Unauthorized("User not found in token");
+
+        int annotatorId = int.Parse(userIdClaim.Value);
+
+        var task = await _context.Tasks
+            .FirstOrDefaultAsync(t => t.TaskId == dto.TaskId);
+
+        if (task == null)
+            return BadRequest("Task not found");
+
+        if (task.AnnotatorId != annotatorId)
+            return Forbid("You are not assigned to this task");
+
+        var dataItem = await _context.DataItems
+            .FirstOrDefaultAsync(x => x.ItemId == dto.ItemId);
+
+        if (dataItem == null)
+            return BadRequest("DataItem not found");
+
+        var taskDataItem = await _context.TaskDataItems
+            .FirstOrDefaultAsync(x =>
+                x.TaskId == dto.TaskId && x.DataItemId == dto.ItemId);
+
+        if (taskDataItem == null)
+            return BadRequest("TaskDataItem not found");
+
+        var annotation = new Annotation
+        {
+            TaskId = dto.TaskId,
+            ItemId = dto.ItemId,
+            LabelId = dto.LabelId,
+            RoundId = dto.RoundId,
+            AnnotatorId = annotatorId,
+            ShapeType = dto.ShapeType,
+            Coordinates = dto.Coordinates,
+            Classification = dto.Classification,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.Annotations.Add(annotation);
+
+        task.Status = DataLabeling.Entities.TaskStatus.Annotating;
+        task.AnnotatedAt = DateTime.UtcNow;
+
+        taskDataItem.ReviewStatus = "Annotating";
+        taskDataItem.ReviewComment = null;
+        taskDataItem.ReviewerId = null;
+        taskDataItem.ReviewedAt = null;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new AnnotationResponse
+        {
+            AnnotationId = annotation.AnnotationId,
+            TaskId = annotation.TaskId,
+            LabelId = annotation.LabelId,
+            ShapeType = annotation.ShapeType,
+            Coordinates = annotation.Coordinates,
+            Classification = annotation.Classification,
+            CreatedAt = annotation.CreatedAt
+        });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAnnotations(
+       [FromQuery] int? taskId,
+       [FromQuery] int? itemId
+   )
+    {
+        var query = _context.Annotations
+            .Include(a => a.Label)
+            .AsQueryable();
+
+        if (taskId.HasValue)
+        {
+            query = query.Where(a => a.TaskId == taskId.Value);
+        }
+
+        if (itemId.HasValue)
+        {
+            query = query.Where(a => a.ItemId == itemId.Value);
+        }
+
+        var data = await query
+            .Select(a => new
+            {
+                annotationId = a.AnnotationId,
+                itemId = a.ItemId,
+                taskId = a.TaskId,
+                roundId = a.RoundId,
+                labelId = a.LabelId,
+                labelName = a.Label.LabelName,
+                shapeType = a.ShapeType,
+                coordinates = a.Coordinates,
+                classification = a.Classification
+            })
+            .ToListAsync();
+
+        return Ok(data);
+    }
+
 }
