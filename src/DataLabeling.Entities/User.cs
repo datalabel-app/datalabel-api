@@ -18,7 +18,7 @@ namespace DataLabeling.Entities
 
         public UserRole Role { get; set; }
 
-        public string Status { get; set; } = "Active";
+        public string Status { get; set; }
 
         public bool IsChangePassword { get; set; } = false;
 

@@ -13,8 +13,6 @@ namespace DataLabeling.Entities
         [Key]
         public int TaskId { get; set; }
 
-        public int DataItemId { get; set; }
-
         public int RoundId { get; set; }
 
         public int? AnnotatorId { get; set; }
@@ -31,13 +29,13 @@ namespace DataLabeling.Entities
 
         public DateTime? ReviewedAt { get; set; }
 
-        public DataItem DataItem { get; set; } = null!;
-
         public DatasetRound Round { get; set; } = null!;
 
         public User? Annotator { get; set; }
 
         public User? Reviewer { get; set; }
+
+        public ICollection<TaskDataItem> TaskDataItems { get; set; } = new List<TaskDataItem>();
 
         public ICollection<Annotation> Annotations { get; set; } = new List<Annotation>();
 

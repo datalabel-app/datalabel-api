@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DataLabeling.DAL.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260316141253_InitDatabasev4")]
-    partial class InitDatabasev4
+    [Migration("20260320083514_FixEntityTaskDataitem")]
+    partial class FixEntityTaskDataitem
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -71,10 +71,12 @@ namespace DataLabeling.DAL.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("AnnotationId"));
 
                     b.Property<int>("AnnotatorId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("annotator_id");
 
                     b.Property<string>("Classification")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("classification");
 
                     b.Property<string>("Coordinates")
                         .IsRequired()
@@ -102,7 +104,8 @@ namespace DataLabeling.DAL.Migrations
                         .HasColumnName("shape_type");
 
                     b.Property<int>("TaskId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("task_id");
 
                     b.HasKey("AnnotationId");
 
@@ -136,6 +139,10 @@ namespace DataLabeling.DAL.Migrations
                         .HasColumnType("character varying(255)")
                         .HasColumnName("dataset_name");
 
+                    b.Property<int?>("ParentDatasetId")
+                        .HasColumnType("integer")
+                        .HasColumnName("parent_dataset_id");
+
                     b.Property<int>("ProjectId")
                         .HasColumnType("integer")
                         .HasColumnName("project_id");
@@ -147,6 +154,8 @@ namespace DataLabeling.DAL.Migrations
                         .HasColumnName("status");
 
                     b.HasKey("DatasetId");
+
+                    b.HasIndex("ParentDatasetId");
 
                     b.HasIndex("ProjectId");
 
@@ -202,6 +211,10 @@ namespace DataLabeling.DAL.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("LabelId"));
 
+                    b.Property<int?>("AnnotatorId")
+                        .HasColumnType("integer")
+                        .HasColumnName("annotator_id");
+
                     b.Property<string>("Description")
                         .HasColumnType("text")
                         .HasColumnName("description");
@@ -212,13 +225,25 @@ namespace DataLabeling.DAL.Migrations
                         .HasColumnType("character varying(255)")
                         .HasColumnName("label_name");
 
+                    b.Property<int>("LabelStatus")
+                        .HasMaxLength(50)
+                        .HasColumnType("integer")
+                        .HasColumnName("label_status");
+
                     b.Property<int>("RoundId")
                         .HasColumnType("integer")
                         .HasColumnName("round_id");
 
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
                     b.HasKey("LabelId");
 
+                    b.HasIndex("AnnotatorId");
+
                     b.HasIndex("RoundId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("labels", (string)null);
                 });
@@ -284,10 +309,6 @@ namespace DataLabeling.DAL.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<int>("DataItemId")
-                        .HasColumnType("integer")
-                        .HasColumnName("data_item_id");
-
                     b.Property<string>("DescriptionError")
                         .HasColumnType("text")
                         .HasColumnName("description_error");
@@ -315,8 +336,6 @@ namespace DataLabeling.DAL.Migrations
 
                     b.HasIndex("AnnotatorId");
 
-                    b.HasIndex("DataItemId");
-
                     b.HasIndex("ReviewerId");
 
                     b.HasIndex("RoundId");
@@ -324,6 +343,38 @@ namespace DataLabeling.DAL.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("tasks", (string)null);
+                });
+
+            modelBuilder.Entity("DataLabeling.Entities.TaskDataItem", b =>
+                {
+                    b.Property<int>("TaskId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DataItemId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReviewComment")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ReviewStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ReviewerId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("TaskId", "DataItemId");
+
+                    b.HasIndex("DataItemId");
+
+                    b.ToTable("task_data_items", (string)null);
                 });
 
             modelBuilder.Entity("DataLabeling.Entities.TaskErrorHistory", b =>
@@ -339,7 +390,7 @@ namespace DataLabeling.DAL.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<int>("DataItemItemId")
+                    b.Property<int?>("DataItemItemId")
                         .HasColumnType("integer");
 
                     b.Property<string>("ErrorMessage")
@@ -360,13 +411,20 @@ namespace DataLabeling.DAL.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("task_id");
 
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
                     b.HasKey("ErrorId");
 
                     b.HasIndex("DataItemItemId");
 
+                    b.HasIndex("ItemId");
+
                     b.HasIndex("ReviewerId");
 
                     b.HasIndex("TaskId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("task_error_histories", (string)null);
                 });
@@ -486,7 +544,7 @@ namespace DataLabeling.DAL.Migrations
                     b.HasOne("DataLabeling.Entities.User", "Annotator")
                         .WithMany()
                         .HasForeignKey("AnnotatorId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("DataItem", "DataItem")
@@ -518,11 +576,18 @@ namespace DataLabeling.DAL.Migrations
 
             modelBuilder.Entity("DataLabeling.Entities.Dataset", b =>
                 {
+                    b.HasOne("DataLabeling.Entities.Dataset", "ParentDataset")
+                        .WithMany("SubDatasets")
+                        .HasForeignKey("ParentDatasetId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("DataLabeling.Entities.Project", "Project")
                         .WithMany("Datasets")
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("ParentDataset");
 
                     b.Navigation("Project");
                 });
@@ -540,11 +605,22 @@ namespace DataLabeling.DAL.Migrations
 
             modelBuilder.Entity("DataLabeling.Entities.Label", b =>
                 {
+                    b.HasOne("DataLabeling.Entities.User", "Annotator")
+                        .WithMany()
+                        .HasForeignKey("AnnotatorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("DataLabeling.Entities.DatasetRound", "Round")
                         .WithMany("Labels")
                         .HasForeignKey("RoundId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("DataLabeling.Entities.User", null)
+                        .WithMany("CreatedLabels")
+                        .HasForeignKey("UserId");
+
+                    b.Navigation("Annotator");
 
                     b.Navigation("Round");
                 });
@@ -567,12 +643,6 @@ namespace DataLabeling.DAL.Migrations
                         .HasForeignKey("AnnotatorId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("DataItem", "DataItem")
-                        .WithMany("Tasks")
-                        .HasForeignKey("DataItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("DataLabeling.Entities.User", "Reviewer")
                         .WithMany()
                         .HasForeignKey("ReviewerId")
@@ -590,25 +660,46 @@ namespace DataLabeling.DAL.Migrations
 
                     b.Navigation("Annotator");
 
-                    b.Navigation("DataItem");
-
                     b.Navigation("Reviewer");
 
                     b.Navigation("Round");
                 });
 
-            modelBuilder.Entity("DataLabeling.Entities.TaskErrorHistory", b =>
+            modelBuilder.Entity("DataLabeling.Entities.TaskDataItem", b =>
                 {
                     b.HasOne("DataItem", "DataItem")
+                        .WithMany("TaskDataItems")
+                        .HasForeignKey("DataItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DataLabeling.Entities.Task", "Task")
+                        .WithMany("TaskDataItems")
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DataItem");
+
+                    b.Navigation("Task");
+                });
+
+            modelBuilder.Entity("DataLabeling.Entities.TaskErrorHistory", b =>
+                {
+                    b.HasOne("DataItem", null)
                         .WithMany("ErrorHistories")
-                        .HasForeignKey("DataItemItemId")
+                        .HasForeignKey("DataItemItemId");
+
+                    b.HasOne("DataItem", "DataItem")
+                        .WithMany()
+                        .HasForeignKey("ItemId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("DataLabeling.Entities.User", "Reviewer")
-                        .WithMany("ReviewedErrors")
+                        .WithMany()
                         .HasForeignKey("ReviewerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("DataLabeling.Entities.Task", "Task")
@@ -616,6 +707,10 @@ namespace DataLabeling.DAL.Migrations
                         .HasForeignKey("TaskId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("DataLabeling.Entities.User", null)
+                        .WithMany("ReviewedErrors")
+                        .HasForeignKey("UserId");
 
                     b.Navigation("DataItem");
 
@@ -641,7 +736,7 @@ namespace DataLabeling.DAL.Migrations
 
                     b.Navigation("ErrorHistories");
 
-                    b.Navigation("Tasks");
+                    b.Navigation("TaskDataItems");
                 });
 
             modelBuilder.Entity("DataLabeling.Entities.Dataset", b =>
@@ -649,6 +744,8 @@ namespace DataLabeling.DAL.Migrations
                     b.Navigation("DataItems");
 
                     b.Navigation("Rounds");
+
+                    b.Navigation("SubDatasets");
                 });
 
             modelBuilder.Entity("DataLabeling.Entities.DatasetRound", b =>
@@ -668,11 +765,15 @@ namespace DataLabeling.DAL.Migrations
                     b.Navigation("Annotations");
 
                     b.Navigation("ErrorHistories");
+
+                    b.Navigation("TaskDataItems");
                 });
 
             modelBuilder.Entity("DataLabeling.Entities.User", b =>
                 {
                     b.Navigation("AssignedTasks");
+
+                    b.Navigation("CreatedLabels");
 
                     b.Navigation("Projects");
 
