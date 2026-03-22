@@ -219,4 +219,103 @@ public class AnnotationController : ControllerBase
         return Ok(data);
     }
 
+
+    [HttpGet("task/{taskId}")]
+    public async Task<IActionResult> GetAnnotationsByTask(int taskId)
+    {
+        var annotations = await _context.Annotations
+            .Include(a => a.Label)
+            .Include(a => a.Annotator)
+            .Where(a => a.TaskId == taskId)
+            .Select(a => new
+            {
+                a.AnnotationId,
+                a.TaskId,
+                a.ItemId,
+                a.LabelId,
+                LabelName = a.Label.LabelName,
+                a.RoundId,
+                a.ShapeType,
+                a.Coordinates,
+                a.Classification,
+                a.AnnotatorId,
+                AnnotatorName = a.Annotator.FullName,
+                a.CreatedAt
+            })
+            .ToListAsync();
+
+        return Ok(annotations);
+    }
+
+    [HttpPut("{annotationId}")]
+    public async Task<IActionResult> UpdateAnnotation(int annotationId, UpdateAnnotationRequest dto)
+    {
+        var annotation = await _context.Annotations
+            .Include(a => a.Task)
+            .FirstOrDefaultAsync(a => a.AnnotationId == annotationId);
+
+        if (annotation == null)
+            return NotFound("Annotation not found");
+
+        var dataItem = await _context.DataItems
+            .FirstOrDefaultAsync(x => x.ItemId == annotation.ItemId);
+
+
+        if (dto.LabelId.HasValue)
+            annotation.LabelId = dto.LabelId.Value;
+
+        if (!string.IsNullOrEmpty(dto.Coordinates))
+            annotation.Coordinates = dto.Coordinates;
+
+        if (!string.IsNullOrEmpty(dto.Classification))
+            annotation.Classification = dto.Classification;
+
+        annotation.CreatedAt = DateTime.UtcNow;
+
+
+        if (annotation.Task != null)
+        {
+            annotation.Task.Status = DataLabeling.Entities.TaskStatus.Annotating;
+
+            annotation.Task.AnnotatedAt = DateTime.UtcNow;
+
+            annotation.Task.ReviewedAt = null;
+            annotation.Task.DescriptionError = null;
+        }
+
+
+        if (dataItem != null)
+        {
+            dataItem.Status = "Annotating";
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            annotation.AnnotationId,
+            annotation.LabelId,
+            annotation.Coordinates,
+            annotation.Classification,
+            annotation.CreatedAt,
+
+            taskStatus = annotation.Task?.Status,
+            dataItemStatus = dataItem?.Status
+        });
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteAnnotation(int id)
+    {
+        var annotation = await _context.Annotations.FindAsync(id);
+
+        if (annotation == null)
+            return NotFound();
+
+        _context.Annotations.Remove(annotation);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
 }
