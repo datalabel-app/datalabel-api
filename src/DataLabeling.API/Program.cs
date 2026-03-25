@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using DataLabeling.API.Hubs;
+using Microsoft.AspNetCore.HttpOverrides;
 var builder = WebApplication.CreateBuilder(args);
 
 // DATABASE
@@ -75,7 +76,7 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins(
-                "https://datalabel-sable.vercel.app",
+                "https://datalabel-web.vercel.app",
                 "http://localhost:5173",
                 "http://localhost:3000"
             )
@@ -126,6 +127,16 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto;
+
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -136,11 +147,10 @@ using (var scope = app.Services.CreateScope())
 }
 
 // MIDDLEWARE
-// if (app.Environment.IsDevelopment())
-// {
 app.UseSwagger();
 app.UseSwaggerUI();
-// }
+
+app.UseForwardedHeaders();
 
 app.UseCors("AllowFrontend");
 

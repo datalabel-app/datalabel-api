@@ -32,7 +32,7 @@ namespace DataLabeling.Controllers
                 .CountAsync(t => t.Status == DataLabeling.Entities.TaskStatus.Pending);
 
             var completedTasks = await _context.Tasks
-                .CountAsync(t => t.Status == DataLabeling.Entities.TaskStatus.Approved);
+                .CountAsync(t => t.Status == DataLabeling.Entities.TaskStatus.Done);
 
             var totalLabels = await _context.Labels.CountAsync();
 
@@ -102,7 +102,7 @@ namespace DataLabeling.Controllers
 
             var completedTasks = await _context.Tasks
                 .CountAsync(t => roundIds.Contains(t.RoundId)
-                                 && t.Status == DataLabeling.Entities.TaskStatus.Approved);
+                                 && t.Status == DataLabeling.Entities.TaskStatus.Done);
 
             var pendingLabels = await _context.Labels
                 .CountAsync(l => roundIds.Contains(l.RoundId)

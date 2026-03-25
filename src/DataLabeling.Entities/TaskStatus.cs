@@ -10,7 +10,7 @@ namespace DataLabeling.Entities
     {
         Pending = 0,
         Annotating = 1,
-        Approved = 2,
-        Rejected = 3
+        Review = 2,
+        Done = 3,
     }
 }

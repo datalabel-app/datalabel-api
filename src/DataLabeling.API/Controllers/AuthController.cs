@@ -207,15 +207,14 @@ namespace DataLabeling.API.Controllers
         {
             var user = await _context.Users
                 .FirstOrDefaultAsync(x => x.Email == request.Email);
-            if (user!.Status != "Active") return BadRequest("Your account banned");
 
             if (user == null)
                 return BadRequest("Email does not exist");
 
             var existingTokens = await _context.Token
-                .Where(x => x.UserId == user.UserId 
-                    && x.TokenType == "OTP" 
-                    && !x.IsUsed 
+                .Where(x => x.UserId == user.UserId
+                    && x.TokenType == "OTP"
+                    && !x.IsUsed
                     && x.Expired > DateTime.UtcNow)
                 .ToListAsync();
 

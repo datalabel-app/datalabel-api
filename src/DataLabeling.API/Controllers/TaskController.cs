@@ -1,7 +1,9 @@
 ﻿using DataLabeling.API.DTOs;
 using DataLabeling.API.Hubs;
 using DataLabeling.DAL.Data;
+using DataLabeling.DTOs.Annotations;
 using DataLabeling.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -23,379 +25,493 @@ namespace DataLabeling.API.Controllers
             _hub = hub;
         }
 
-        [HttpGet("round/{roundId}")]
-        public async Task<IActionResult> GetTasksByRound(int roundId)
-        {
-            var tasks = await _context.Tasks
-                .Where(t => t.RoundId == roundId)
-                .Include(t => t.DataItem)
-                .Include(t => t.Annotator)
-                .Include(t => t.Reviewer)
-                .Include(t => t.Annotations)
-                    .ThenInclude(a => a.Label)
-                .OrderBy(t => t.TaskId)
-                .Select(t => new
-                {
-                    TaskId = t.TaskId,
-                    DataItemId = t.DataItemId,
-                    RoundId = t.RoundId,
-                    AnnotatorId = t.AnnotatorId,
-                    AnnotatorName = t.Annotator != null ? t.Annotator.FullName : null,
-                    ReviewerId = t.ReviewerId,
-                    ReviewerName = t.Reviewer != null ? t.Reviewer.FullName : null,
-                    Status = t.Status.ToString(),
-                    CreatedAt = t.CreatedAt,
-                    AnnotatedAt = t.AnnotatedAt,
-                    ReviewedAt = t.ReviewedAt,
-                    FileUrl = t.DataItem.FileUrl,
-
-                    // Danh sách label gắn với task
-                    Labels = t.Annotations.Select(a => new
-                    {
-                        LabelId = a.LabelId,
-                        LabelName = a.Label.LabelName
-                    }).ToList()
-                })
-                .ToListAsync();
-
-            return Ok(tasks);
-        }
-
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<TaskResponse>>> GetAll()
-        {
-            var tasks = await _context.Tasks
-                .Select(t => new TaskResponse
-                {
-                    TaskId = t.TaskId,
-                    DataItemId = t.DataItemId,
-                    RoundId = t.RoundId,
-                    AnnotatorId = t.AnnotatorId,
-                    ReviewerId = t.ReviewerId,
-                    Status = t.Status.ToString(),
-                    CreatedAt = t.CreatedAt,
-                    AnnotatedAt = t.AnnotatedAt,
-                    ReviewedAt = t.ReviewedAt
-                })
-                .ToListAsync();
-
-            return Ok(tasks);
-        }
-
-        [HttpGet("{taskId}")]
-        public async Task<IActionResult> GetTaskById(int taskId)
-        {
-            var task = await _context.Tasks
-                .Include(t => t.DataItem)
-                .Include(t => t.Round)
-                .Include(t => t.Annotations)
-                .FirstOrDefaultAsync(t => t.TaskId == taskId);
-
-            if (task == null)
-                return NotFound();
-
-            var annotation = task.Annotations.FirstOrDefault();
-
-            return Ok(new
-            {
-                task.TaskId,
-                task.Status,
-                task.CreatedAt,
-                task.AnnotatedAt,
-                task.ReviewedAt,
-                task.DescriptionError,
-
-                ItemId = task.DataItemId,
-
-                FileUrl = task.DataItem.FileUrl,
-
-                Round = new
-                {
-                    task.Round.RoundId,
-                    task.Round.RoundNumber,
-                    task.Round.ShapeType,
-                    task.Round.Description
-                },
-
-                Annotation = annotation == null ? null : new
-                {
-                    annotation.AnnotationId,
-                    annotation.LabelId,
-                    annotation.ShapeType,
-                    annotation.Coordinates,
-                    annotation.Classification,
-                    annotation.AnnotatorId,
-                    annotation.CreatedAt
-                }
-            });
-        }
-
-        [HttpGet("my-annotator-tasks")]
-        public async Task<IActionResult> GetMyAnnotatorTasks()
-        {
-            var userId = int.Parse(
-                User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value
-            );
-
-            var tasks = await _context.Tasks
-                .Include(t => t.DataItem)
-                    .ThenInclude(d => d.Dataset)
-                .Include(t => t.Round)
-                .Where(t => t.AnnotatorId == userId)
-                 .OrderByDescending(t => t.CreatedAt)
-                .Select(t => new
-                {
-                    t.TaskId,
-                    t.DataItemId,
-                    t.Status,
-                    t.CreatedAt,
-
-                    FileUrl = t.DataItem.FileUrl,
-
-                    Dataset = new
-                    {
-                        t.DataItem.Dataset.DatasetId,
-                        t.DataItem.Dataset.DatasetName,
-                        t.DataItem.Dataset.CreatedAt
-                    },
-
-                    Round = new
-                    {
-                        t.Round.RoundId,
-                        t.Round.RoundNumber,
-                        t.Round.ShapeType,
-                        t.Round.Description,
-                        t.Round.Status,
-                        t.Round.CreatedAt
-                    }
-                })
-                .ToListAsync();
-
-            return Ok(tasks);
-        }
-
-        [HttpGet("my-reviewer-tasks")]
-        public async Task<IActionResult> GetMyReviewerTasks()
-        {
-            var userId = int.Parse(
-              User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value
-          );
-
-            var tasks = await _context.Tasks
-                  .Include(t => t.DataItem)
-                    .ThenInclude(d => d.Dataset)
-                .Include(t => t.Round)
-                .Where(t => t.ReviewerId == userId)
-                 .OrderByDescending(t => t.CreatedAt)
-                .Select(t => new
-                {
-                    t.TaskId,
-                    t.DataItemId,
-                    t.Status,
-                    t.CreatedAt,
-
-                    FileUrl = t.DataItem.FileUrl,
-                    Dataset = new
-                    {
-                        t.DataItem.Dataset.DatasetId,
-                        t.DataItem.Dataset.DatasetName,
-                        t.DataItem.Dataset.CreatedAt
-                    },
-                    Round = new
-                    {
-                        t.Round.RoundId,
-                        t.Round.RoundNumber,
-                        t.Round.ShapeType,
-                        t.Round.Description,
-                        t.Round.Status,
-                        t.Round.CreatedAt,
-                    }
-                })
-                .ToListAsync();
-
-            return Ok(tasks);
-        }
-
         [HttpPost]
-        public async Task<ActionResult<TaskResponse>> Create(CreateTaskRequest dto)
+        public async Task<IActionResult> CreateTask([FromBody] CreateTaskRequest dto)
         {
-            var exists = await _context.Tasks
-                .AnyAsync(t => t.DataItemId == dto.DataItemId && t.RoundId == dto.RoundId);
+            using var transaction = await _context.Database.BeginTransactionAsync();
 
-            if (exists)
+            try
             {
-                return BadRequest("Task for this DataItem and Round already exists.");
-            }
+                var task = new DataLabeling.Entities.Task
+                {
+                    RoundId = dto.RoundId,
+                    AnnotatorId = dto.AnnotatorId,
+                    ReviewerId = dto.ReviewerId,
+                    Status = DataLabeling.Entities.TaskStatus.Pending,
+                    CreatedAt = DateTime.UtcNow
+                };
 
-            var task = new DataLabeling.Entities.Task
-            {
-                DataItemId = dto.DataItemId,
-                RoundId = dto.RoundId,
-                AnnotatorId = dto.AnnotatorId,
-                ReviewerId = dto.ReviewerId,
-                Status = DataLabeling.Entities.TaskStatus.Pending,
-                CreatedAt = DateTime.UtcNow
-            };
+                _context.Tasks.Add(task);
+                await _context.SaveChangesAsync();
 
-            _context.Tasks.Add(task);
-            await _context.SaveChangesAsync();
-
-            if (task.AnnotatorId != null)
-            {
-                await _hub.Clients
-                    .Group(task.AnnotatorId.ToString())
-                    .SendAsync("ReceiveNotification", new
+                if (dto.DataItemIds.Any())
+                {
+                    var taskDataItems = dto.DataItemIds.Select(id => new TaskDataItem
                     {
-                        message = "You have been assigned a new task!",
-                        taskId = task.TaskId,
-                        type = "TASK_ASSIGNED"
+                        TaskId = task.TaskId,
+                        DataItemId = id
                     });
+
+                    _context.TaskDataItems.AddRange(taskDataItems);
+                    await _context.SaveChangesAsync();
+                }
+
+                await transaction.CommitAsync();
+
+                var response = new TaskResponse
+                {
+                    TaskId = task.TaskId,
+                    RoundId = task.RoundId,
+                    AnnotatorId = task.AnnotatorId,
+                    ReviewerId = task.ReviewerId,
+                    Status = task.Status.ToString(),
+                    CreatedAt = task.CreatedAt,
+                    DataItemIds = dto.DataItemIds
+                };
+
+                return Ok(response);
             }
-
-            if (task.ReviewerId != null)
+            catch (Exception ex)
             {
-                await _hub.Clients
-                    .Group(task.ReviewerId.ToString())
-                    .SendAsync("ReceiveNotification", new
-                    {
-                        message = "A new task is waiting for your review!",
-                        taskId = task.TaskId,
-                        type = "TASK_FOR_REVIEW"
-                    });
+                await transaction.RollbackAsync();
+                return BadRequest(ex.Message);
             }
-
-            var result = new TaskResponse
-            {
-                TaskId = task.TaskId,
-                DataItemId = task.DataItemId,
-                RoundId = task.RoundId,
-                AnnotatorId = task.AnnotatorId,
-                ReviewerId = task.ReviewerId,
-                Status = task.Status.ToString(),
-                CreatedAt = task.CreatedAt
-            };
-
-            return CreatedAtAction(nameof(GetTaskById), new { taskId = task.TaskId }, result);
         }
 
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, UpdateTaskRequest dto)
+        [HttpGet("{taskId}/review")]
+        public async Task<IActionResult> GetReviewTask(int taskId)
         {
             var task = await _context.Tasks
-                .Include(t => t.DataItem)
-                .FirstOrDefaultAsync(t => t.TaskId == id);
+                .Include(t => t.TaskDataItems)
+                    .ThenInclude(td => td.DataItem)
+                .FirstOrDefaultAsync(t => t.TaskId == taskId);
 
             if (task == null)
                 return NotFound("Task not found");
 
-            if (dto.AnnotatorId != null)
-                task.AnnotatorId = dto.AnnotatorId;
+            var annotations = await _context.Annotations
+                .Where(a => a.TaskId == taskId)
+                .Include(a => a.Label)
+                .Include(a => a.Annotator)
+                .ToListAsync();
 
-            if (dto.ReviewerId != null)
-                task.ReviewerId = dto.ReviewerId;
+            var annotationDict = annotations
+                .GroupBy(a => a.ItemId)
+                .ToDictionary(g => g.Key, g => g.First());
 
-            if (!string.IsNullOrEmpty(dto.Status))
+            var result = new ReviewTaskResponseDto
             {
-                if (Enum.TryParse<DataLabeling.Entities.TaskStatus>(dto.Status, true, out var status))
+                TaskId = task.TaskId,
+                RoundId = task.RoundId,
+                Status = task.Status.ToString(),
+
+                Items = task.TaskDataItems.Select(td =>
                 {
-                    task.Status = status;
+                    annotationDict.TryGetValue(td.DataItemId, out var ann);
 
-                    switch (status)
+                    return new ReviewItemDto
                     {
-                        case DataLabeling.Entities.TaskStatus.Annotating:
-                            task.AnnotatedAt = DateTime.UtcNow;
+                        ItemId = td.DataItem.ItemId,
+                        FileUrl = td.DataItem.FileUrl,
 
-                            if (task.DataItem != null)
-                                task.DataItem.Status = "Annotating";
-                            break;
+                        ReviewStatus = td.ReviewStatus,
+                        ReviewComment = td.ReviewComment,
 
-                        case DataLabeling.Entities.TaskStatus.Approved:
-                            task.ReviewedAt = DateTime.UtcNow;
+                        Annotation = ann == null ? null : new AnnotationDto
+                        {
+                            AnnotationId = ann.AnnotationId,
+                            LabelId = ann.LabelId,
+                            LabelName = ann.Label.LabelName,
 
-                            var tasksOfItem = await _context.Tasks
-                                .Where(t => t.DataItemId == task.DataItemId)
-                                .ToListAsync();
+                            AnnotatorId = ann.AnnotatorId,
+                            AnnotatorName = ann.Annotator.FullName,
 
-                            var allApproved = tasksOfItem.All(t => t.Status == DataLabeling.Entities.TaskStatus.Approved);
+                            CreatedAt = ann.CreatedAt
+                        }
+                    };
+                }).ToList()
+            };
 
-                            if (task.DataItem != null)
-                            {
-                                if (allApproved)
-                                {
-                                    task.DataItem.Status = "Done";
-                                }
-                                else
-                                {
-                                    task.DataItem.Status = "Pending";
-                                }
-                            }
+            return Ok(result);
+        }
 
-                            break;
-                        case DataLabeling.Entities.TaskStatus.Rejected:
-                            task.ReviewedAt = DateTime.UtcNow;
+        [HttpPost("review/bulk")]
+        public async Task<IActionResult> BulkReview([FromBody] BulkReviewDto dto)
+        {
+            var reviewerId = int.Parse(
+                User.FindFirst(ClaimTypes.NameIdentifier)!.Value
+            );
 
-                            if (!string.IsNullOrEmpty(dto.DescriptionError))
-                                task.DescriptionError = dto.DescriptionError;
+            var task = await _context.Tasks
+                .Include(t => t.Round)
+                .FirstOrDefaultAsync(t => t.TaskId == dto.TaskId);
 
-                            if (task.DataItem != null)
-                                task.DataItem.Status = "Rejected";
+            if (task == null)
+                return BadRequest("Task not found");
 
-                            var errorHistory = new TaskErrorHistory
-                            {
-                                TaskId = task.TaskId,
-                                ItemId = task.DataItemId,
-                                ReviewerId = task.ReviewerId ?? 0,
-                                ErrorMessage = dto.DescriptionError ?? "Unknown error",
-                                CreatedAt = DateTime.UtcNow
-                            };
+            var itemIds = dto.Items.Keys.ToList();
 
-                            _context.TaskErrorHistories.Add(errorHistory);
+            var taskItems = await _context.TaskDataItems
+                .Where(x => x.TaskId == dto.TaskId && itemIds.Contains(x.DataItemId))
+                .ToListAsync();
 
-                            if (task.AnnotatorId != null)
-                            {
-                                await _hub.Clients
-                                    .Group(task.AnnotatorId.ToString())
-                                    .SendAsync("ReceiveNotification", new
-                                    {
-                                        message = "The task has been rejected; please resubmit!",
-                                        taskId = task.TaskId,
-                                        error = dto.DescriptionError,
-                                        type = "TASK_REJECTED"
-                                    });
-                            }
+            if (taskItems.Count != itemIds.Count)
+                return BadRequest("Some items not found in task");
 
-                            break;
-                    }
+            var errorHistories = new List<TaskErrorHistory>();
+
+            foreach (var taskItem in taskItems)
+            {
+                var reviewData = dto.Items[taskItem.DataItemId];
+                var status = reviewData.Status?.Trim().ToLower();
+
+                if (status != "approved" && status != "rejected")
+                    return BadRequest($"Invalid status at item {taskItem.DataItemId}");
+
+                if (taskItem.ReviewStatus == "Approved" || taskItem.ReviewStatus == "Rejected")
+                    continue;
+
+                taskItem.ReviewerId = reviewerId;
+                taskItem.ReviewedAt = DateTime.UtcNow;
+
+                if (status == "approved")
+                {
+                    taskItem.ReviewStatus = "Approved";
+                    taskItem.ReviewComment = null;
                 }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(reviewData.Comment))
+                        return BadRequest($"Item {taskItem.DataItemId} cần comment khi reject");
+
+                    taskItem.ReviewStatus = "Rejected";
+                    taskItem.ReviewComment = reviewData.Comment;
+
+                    errorHistories.Add(new TaskErrorHistory
+                    {
+                        TaskId = dto.TaskId,
+                        ItemId = taskItem.DataItemId,
+                        ReviewerId = reviewerId,
+                        ErrorMessage = reviewData.Comment!,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            if (errorHistories.Any())
+                _context.TaskErrorHistories.AddRange(errorHistories);
+
+            var allItems = await _context.TaskDataItems
+                .Where(x => x.TaskId == dto.TaskId)
+                .ToListAsync();
+
+            var allApproved = allItems.All(x => x.ReviewStatus == "Approved");
+            var hasRejected = allItems.Any(x => x.ReviewStatus == "Rejected");
+
+            if (allApproved)
+            {
+                task.Status = DataLabeling.Entities.TaskStatus.Done;
+                task.ReviewedAt = DateTime.UtcNow;
+
+                await CreateSubDatasetFromLabel(task);
+            }
+            else if (hasRejected)
+            {
+                task.Status = DataLabeling.Entities.TaskStatus.Pending;
+                task.ReviewedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                task.Status = DataLabeling.Entities.TaskStatus.Pending;
             }
 
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
-                task.TaskId,
-                task.Status,
-                task.AnnotatedAt,
-                task.ReviewedAt,
-                task.DescriptionError,
-                dataItemStatus = task.DataItem?.Status
+                message = "Review submitted",
+                total = taskItems.Count,
+                approved = taskItems.Count(x => x.ReviewStatus == "Approved"),
+                rejected = taskItems.Count(x => x.ReviewStatus == "Rejected")
             });
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        //[HttpGet("round/{roundId}")]
+        //public async Task<IActionResult> GetTasksByRound(int roundId)
+        //{
+        //    var tasks = await _context.Tasks
+        //        .Where(t => t.RoundId == roundId)
+        //        .Include(t => t.DataItem)
+        //        .Include(t => t.Annotator)
+        //        .Include(t => t.Reviewer)
+        //        .Include(t => t.Annotations)
+        //            .ThenInclude(a => a.Label)
+        //        .OrderBy(t => t.TaskId)
+        //        .Select(t => new
+        //        {
+        //            TaskId = t.TaskId,
+        //            DataItemId = t.DataItemId,
+        //            RoundId = t.RoundId,
+        //            AnnotatorId = t.AnnotatorId,
+        //            AnnotatorName = t.Annotator != null ? t.Annotator.FullName : null,
+        //            ReviewerId = t.ReviewerId,
+        //            ReviewerName = t.Reviewer != null ? t.Reviewer.FullName : null,
+        //            Status = t.Status.ToString(),
+        //            CreatedAt = t.CreatedAt,
+        //            AnnotatedAt = t.AnnotatedAt,
+        //            ReviewedAt = t.ReviewedAt,
+        //            FileUrl = t.DataItem.FileUrl,
+
+        //            // Danh sách label gắn với task
+        //            Labels = t.Annotations.Select(a => new
+        //            {
+        //                LabelId = a.LabelId,
+        //                LabelName = a.Label.LabelName
+        //            }).ToList()
+        //        })
+        //        .ToListAsync();
+
+        //    return Ok(tasks);
+        //}
+
+        //[HttpGet]
+        //public async Task<ActionResult<IEnumerable<TaskResponse>>> GetAll()
+        //{
+        //    var tasks = await _context.Tasks
+        //        .Select(t => new TaskResponse
+        //        {
+        //            TaskId = t.TaskId,
+        //            DataItemId = t.DataItemId,
+        //            RoundId = t.RoundId,
+        //            AnnotatorId = t.AnnotatorId,
+        //            ReviewerId = t.ReviewerId,
+        //            Status = t.Status.ToString(),
+        //            CreatedAt = t.CreatedAt,
+        //            AnnotatedAt = t.AnnotatedAt,
+        //            ReviewedAt = t.ReviewedAt
+        //        })
+        //        .ToListAsync();
+
+        //    return Ok(tasks);
+        //}
+
+        [Authorize]
+        [HttpGet("{taskId}")]
+        public async Task<IActionResult> GetTaskById(int taskId)
         {
-            var task = await _context.Tasks.FindAsync(id);
+            var task = await _context.Tasks
+                .Where(t => t.TaskId == taskId)
+                .Select(t => new TaskDetailDto
+                {
+                    TaskId = t.TaskId,
+                    RoundName = t.Round.Description,
+                    RoundId = t.Round.RoundId,
+                    ShapeType = (int)t.Round.ShapeType,
+                    AnnotatorName = t.Annotator != null ? t.Annotator.FullName : null,
+                    ReviewerName = t.Reviewer != null ? t.Reviewer.FullName : null,
+
+                    DataItems = t.TaskDataItems
+                   .Select(td => new
+                   {
+                       td,
+                       annotations = _context.Annotations
+                        .Where(a => a.TaskId == t.TaskId && a.ItemId == td.DataItemId)
+                        .Select(a => new AnnotationResponse
+                        {
+                            AnnotationId = a.AnnotationId,
+                            LabelId = a.LabelId,
+                            TaskId = a.TaskId,
+                            ShapeType = a.ShapeType,
+                            Coordinates = a.Coordinates,
+                            Classification = a.Classification
+                        })
+                        .ToList()
+                   })
+                .Select(x => new TaskDataItemDto
+                {
+                    ItemId = x.td.DataItem.ItemId,
+                    FileUrl = x.td.DataItem.FileUrl,
+                    Status = x.td.DataItem.Status,
+
+                    ReviewStatus = x.td.ReviewStatus,
+                    ReviewComment = x.td.ReviewComment,
+
+                    Annotations = x.annotations,
+
+                    ErrorMessage = _context.TaskErrorHistories
+                        .Where(e => e.TaskId == t.TaskId && e.ItemId == x.td.DataItemId)
+                        .OrderByDescending(e => e.CreatedAt)
+                        .Select(e => e.ErrorMessage)
+                        .FirstOrDefault()
+                })
+                .ToList()
+                })
+                .FirstOrDefaultAsync();
 
             if (task == null)
-                return NotFound();
+                return NotFound(new { message = "Task not found" });
 
+            return Ok(task);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateTask(int id, [FromBody] UpdateTaskRequest dto)
+        {
+            var task = await _context.Tasks.FindAsync(id);
+            if (task == null) return NotFound();
+
+            task.AnnotatorId = dto.AnnotatorId ?? task.AnnotatorId;
+            task.ReviewerId = dto.ReviewerId ?? task.ReviewerId;
+            task.Status = dto.Status ?? task.Status;
+            task.DescriptionError = dto.DescriptionError ?? task.DescriptionError;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(task);
+        }
+
+        [Authorize]
+        [HttpGet("annotator/me")]
+        public async Task<IActionResult> GetMyAnnotatorTasks()
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            var tasks = await _context.Tasks
+                .Where(t => t.AnnotatorId == userId)
+                .Include(t => t.Round)
+                .Include(t => t.Annotator)
+                .Include(t => t.Reviewer)
+                .Include(t => t.TaskDataItems)
+                .Select(t => new TaskResponseDto
+                {
+                    TaskId = t.TaskId,
+                    RoundName = t.Round.Description,
+                    AnnotatorName = t.Annotator != null ? t.Annotator.FullName : null,
+                    ReviewerName = t.Reviewer != null ? t.Reviewer.FullName : null,
+                    DataItemCount = t.TaskDataItems.Count,
+                    ShapeType = (int)t.Round.ShapeType,
+                    Status = t.Status,
+                })
+                .ToListAsync();
+
+            return Ok(tasks);
+        }
+
+        [Authorize]
+        [HttpGet("reviewer/me")]
+        public async Task<IActionResult> GetMyReviewerTasks()
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            var tasks = await _context.Tasks
+                .Where(t => t.ReviewerId == userId)
+                .Include(t => t.Round)
+                .Include(t => t.Annotator)
+                .Include(t => t.Reviewer)
+                .Include(t => t.TaskDataItems)
+                .Select(t => new TaskResponseDto
+                {
+                    TaskId = t.TaskId,
+                    RoundName = t.Round.Description,
+                    AnnotatorName = t.Annotator != null ? t.Annotator.FullName : null,
+                    ReviewerName = t.Reviewer != null ? t.Reviewer.FullName : null,
+                    DataItemCount = t.TaskDataItems.Count,
+                    ShapeType = (int)t.Round.ShapeType,
+                    Status = t.Status,
+                })
+                .ToListAsync();
+
+            return Ok(tasks);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteTask(int id)
+        {
+            var task = await _context.Tasks
+                .Include(t => t.TaskDataItems)
+                .FirstOrDefaultAsync(t => t.TaskId == id);
+
+            if (task == null) return NotFound();
+
+            _context.TaskDataItems.RemoveRange(task.TaskDataItems);
             _context.Tasks.Remove(task);
 
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return Ok("Deleted");
+        }
+
+        private async System.Threading.Tasks.Task CreateSubDatasetFromLabel(DataLabeling.Entities.Task task)
+        {
+            //lấy dataset cha (root dataset)
+            var parentDataset = await _context.Datasets
+                .FirstOrDefaultAsync(d => d.DatasetId == task.Round.DatasetId);
+
+            if (parentDataset == null)
+                return;
+
+            //lấy annotation
+            var annotations = await _context.Annotations
+                .Include(a => a.Label)
+                .Where(a => a.TaskId == task.TaskId)
+                .ToListAsync();
+
+            //group theo label
+            var groups = annotations
+                .GroupBy(a => a.Label.LabelName)
+                .ToList();
+
+            foreach (var group in groups)
+            {
+                var labelName = group.Key;
+
+                //check đã có dataset con chưa
+                var existingDataset = await _context.Datasets.FirstOrDefaultAsync(d =>
+                    d.ParentDatasetId == parentDataset.DatasetId &&
+                    d.DatasetName == labelName
+                );
+
+                if (existingDataset == null)
+                {
+                    var newDataset = new Dataset
+                    {
+                        DatasetName = labelName,
+                        ParentDatasetId = parentDataset.DatasetId,
+                        ProjectId = parentDataset.ProjectId,
+                        Status = "Active",
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    _context.Datasets.Add(newDataset);
+                    await _context.SaveChangesAsync();
+
+                    existingDataset = newDataset;
+                }
+
+                //OPTIONAL: add DataItem vào dataset con
+                var itemIds = group.Select(x => x.ItemId).Distinct().ToList();
+
+                var dataItems = await _context.DataItems
+                    .Where(x => itemIds.Contains(x.ItemId))
+                    .ToListAsync();
+
+                foreach (var item in dataItems)
+                {
+                    // tránh duplicate
+                    if (!_context.DataItems.Any(x => x.ItemId == item.ItemId && x.DatasetId == existingDataset.DatasetId))
+                    {
+                        var newItem = new DataItem
+                        {
+                            FileUrl = item.FileUrl,
+                            DatasetId = existingDataset.DatasetId
+                        };
+
+                        _context.DataItems.Add(newItem);
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
         }
 
     }
