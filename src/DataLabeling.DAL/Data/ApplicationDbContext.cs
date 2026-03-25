@@ -70,23 +70,47 @@ namespace DataLabeling.DAL.Data
             modelBuilder.Entity<Dataset>(entity =>
             {
                 entity.ToTable("datasets");
+
                 entity.HasKey(e => e.DatasetId);
-                entity.Property(e => e.DatasetId).HasColumnName("dataset_id");
-                entity.Property(e => e.ParentDatasetId).HasColumnName("parent_dataset_id");
-                entity.Property(e => e.ProjectId).HasColumnName("project_id");
-                entity.Property(e => e.DatasetName).HasColumnName("dataset_name").HasMaxLength(255);
-                entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50);
-                entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+
+                entity.Property(e => e.DatasetId)
+                    .HasColumnName("dataset_id");
+
+                entity.Property(e => e.ParentDatasetId)
+                    .HasColumnName("parent_dataset_id");
+
+                entity.Property(e => e.ProjectId)
+                    .HasColumnName("project_id");
+
+                entity.Property(e => e.DatasetName)
+                    .HasColumnName("dataset_name")
+                    .HasMaxLength(255);
+
+                entity.Property(e => e.Status)
+                    .HasColumnName("status")
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnName("created_at");
+
+                entity.Property(e => e.LabelId)
+                    .HasColumnName("label_id")
+                    .IsRequired(false);
+
+                entity.HasOne(e => e.Label)
+                    .WithMany()
+                    .HasForeignKey(e => e.LabelId)
+                    .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasOne(e => e.Project)
-                      .WithMany(p => p.Datasets)
-                      .HasForeignKey(e => e.ProjectId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                    .WithMany(p => p.Datasets)
+                    .HasForeignKey(e => e.ProjectId)
+                    .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(e => e.ParentDataset)
-                      .WithMany(d => d.SubDatasets)
-                      .HasForeignKey(e => e.ParentDatasetId)
-                      .OnDelete(DeleteBehavior.Restrict); // giữ subdataset nếu cha xóa
+                    .WithMany(d => d.SubDatasets)
+                    .HasForeignKey(e => e.ParentDatasetId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             // -----------------------

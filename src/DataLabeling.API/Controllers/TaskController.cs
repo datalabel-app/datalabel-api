@@ -168,7 +168,7 @@ namespace DataLabeling.API.Controllers
                 if (status != "approved" && status != "rejected")
                     return BadRequest($"Invalid status at item {taskItem.DataItemId}");
 
-                if (taskItem.ReviewStatus == "Approved" || taskItem.ReviewStatus == "Rejected")
+                if (taskItem.ReviewStatus == "Approved")
                     continue;
 
                 taskItem.ReviewerId = reviewerId;
@@ -201,6 +201,10 @@ namespace DataLabeling.API.Controllers
             if (errorHistories.Any())
                 _context.TaskErrorHistories.AddRange(errorHistories);
 
+            await _context.SaveChangesAsync();
+
+            await PushApprovedItemsToDataset(dto, task.Round.DatasetId);
+
             var allItems = await _context.TaskDataItems
                 .Where(x => x.TaskId == dto.TaskId)
                 .ToListAsync();
@@ -212,8 +216,6 @@ namespace DataLabeling.API.Controllers
             {
                 task.Status = DataLabeling.Entities.TaskStatus.Done;
                 task.ReviewedAt = DateTime.UtcNow;
-
-                await CreateSubDatasetFromLabel(task);
             }
             else if (hasRejected)
             {
@@ -311,40 +313,40 @@ namespace DataLabeling.API.Controllers
                     ReviewerName = t.Reviewer != null ? t.Reviewer.FullName : null,
 
                     DataItems = t.TaskDataItems
-                   .Select(td => new
-                   {
-                       td,
-                       annotations = _context.Annotations
-                        .Where(a => a.TaskId == t.TaskId && a.ItemId == td.DataItemId)
-                        .Select(a => new AnnotationResponse
-                        {
-                            AnnotationId = a.AnnotationId,
-                            LabelId = a.LabelId,
-                            TaskId = a.TaskId,
-                            ShapeType = a.ShapeType,
-                            Coordinates = a.Coordinates,
-                            Classification = a.Classification
-                        })
-                        .ToList()
-                   })
-                .Select(x => new TaskDataItemDto
-                {
-                    ItemId = x.td.DataItem.ItemId,
-                    FileUrl = x.td.DataItem.FileUrl,
-                    Status = x.td.DataItem.Status,
+                                .Select(td => new
+                                {
+                                    td,
+                                    annotations = _context.Annotations
+                                    .Where(a => a.TaskId == t.TaskId && a.ItemId == td.DataItemId)
+                                    .Select(a => new AnnotationResponse
+                                    {
+                                        AnnotationId = a.AnnotationId,
+                                        LabelId = a.LabelId,
+                                        TaskId = a.TaskId,
+                                        ShapeType = a.ShapeType,
+                                        Coordinates = a.Coordinates,
+                                        Classification = a.Classification
+                                    })
+                                    .ToList()
+                                })
+                                .Select(x => new TaskDataItemDto
+                                {
+                                    ItemId = x.td.DataItem.ItemId,
+                                    FileUrl = x.td.DataItem.FileUrl,
+                                    Status = x.td.DataItem.Status,
+                                    AnnotationId = x.annotations.FirstOrDefault().AnnotationId,
+                                    ReviewStatus = x.td.ReviewStatus,
+                                    ReviewComment = x.td.ReviewComment,
 
-                    ReviewStatus = x.td.ReviewStatus,
-                    ReviewComment = x.td.ReviewComment,
+                                    Annotations = x.annotations,
 
-                    Annotations = x.annotations,
-
-                    ErrorMessage = _context.TaskErrorHistories
-                        .Where(e => e.TaskId == t.TaskId && e.ItemId == x.td.DataItemId)
-                        .OrderByDescending(e => e.CreatedAt)
-                        .Select(e => e.ErrorMessage)
-                        .FirstOrDefault()
-                })
-                .ToList()
+                                    ErrorMessage = _context.TaskErrorHistories
+                                        .Where(e => e.TaskId == t.TaskId && e.ItemId == x.td.DataItemId)
+                                        .OrderByDescending(e => e.CreatedAt)
+                                        .Select(e => e.ErrorMessage)
+                                        .FirstOrDefault()
+                                })
+                                .ToList()
                 })
                 .FirstOrDefaultAsync();
 
@@ -441,78 +443,178 @@ namespace DataLabeling.API.Controllers
             return Ok("Deleted");
         }
 
-        private async System.Threading.Tasks.Task CreateSubDatasetFromLabel(DataLabeling.Entities.Task task)
+        private async Task<List<Dataset>> GetAllSubDatasets(int parentId)
         {
-            //lấy dataset cha (root dataset)
-            var parentDataset = await _context.Datasets
-                .FirstOrDefaultAsync(d => d.DatasetId == task.Round.DatasetId);
+            var result = new List<Dataset>();
 
-            if (parentDataset == null)
-                return;
-
-            //lấy annotation
-            var annotations = await _context.Annotations
-                .Include(a => a.Label)
-                .Where(a => a.TaskId == task.TaskId)
+            var children = await _context.Datasets
+                .Where(d => d.ParentDatasetId == parentId)
                 .ToListAsync();
 
-            //group theo label
-            var groups = annotations
-                .GroupBy(a => a.Label.LabelName)
-                .ToList();
-
-            foreach (var group in groups)
+            foreach (var child in children)
             {
-                var labelName = group.Key;
+                result.Add(child);
 
-                //check đã có dataset con chưa
-                var existingDataset = await _context.Datasets.FirstOrDefaultAsync(d =>
-                    d.ParentDatasetId == parentDataset.DatasetId &&
-                    d.DatasetName == labelName
-                );
+                var sub = await GetAllSubDatasets(child.DatasetId);
+                result.AddRange(sub);
+            }
 
-                if (existingDataset == null)
+            return result;
+        }
+
+        //private async System.Threading.Tasks.Task CreateSubDatasetFromLabel(DataLabeling.Entities.Task task)
+        //{
+        //    //lấy dataset cha (root dataset)
+        //    var parentDataset = await _context.Datasets
+        //        .FirstOrDefaultAsync(d => d.DatasetId == task.Round.DatasetId);
+
+        //    if (parentDataset == null)
+        //        return;
+
+        //    //lấy annotation
+        //    var annotations = await _context.Annotations
+        //        .Include(a => a.Label)
+        //        .Where(a => a.TaskId == task.TaskId)
+        //        .ToListAsync();
+
+        //    //group theo label
+        //    var groups = annotations
+        //        .GroupBy(a => a.Label.LabelName)
+        //        .ToList();
+
+        //    foreach (var group in groups)
+        //    {
+        //        var labelName = group.Key;
+
+        //        //check đã có dataset con chưa
+        //        var existingDataset = await _context.Datasets.FirstOrDefaultAsync(d =>
+        //            d.ParentDatasetId == parentDataset.DatasetId &&
+        //            d.DatasetName == labelName
+        //        );
+
+        //        if (existingDataset == null)
+        //        {
+        //            var newDataset = new Dataset
+        //            {
+        //                DatasetName = labelName,
+        //                ParentDatasetId = parentDataset.DatasetId,
+        //                ProjectId = parentDataset.ProjectId,
+        //                Status = "Active",
+        //                CreatedAt = DateTime.UtcNow
+        //            };
+
+        //            _context.Datasets.Add(newDataset);
+        //            await _context.SaveChangesAsync();
+
+        //            existingDataset = newDataset;
+        //        }
+
+        //        //OPTIONAL: add DataItem vào dataset con
+        //        var itemIds = group.Select(x => x.ItemId).Distinct().ToList();
+
+        //        var dataItems = await _context.DataItems
+        //            .Where(x => itemIds.Contains(x.ItemId))
+        //            .ToListAsync();
+
+        //        foreach (var item in dataItems)
+        //        {
+        //            // tránh duplicate
+        //            if (!_context.DataItems.Any(x => x.ItemId == item.ItemId && x.DatasetId == existingDataset.DatasetId))
+        //            {
+        //                var newItem = new DataItem
+        //                {
+        //                    FileUrl = item.FileUrl,
+        //                    DatasetId = existingDataset.DatasetId
+        //                };
+
+        //                _context.DataItems.Add(newItem);
+        //            }
+        //        }
+        //    }
+
+        //    await _context.SaveChangesAsync();
+        //}
+
+        private async System.Threading.Tasks.Task PushApprovedItemsToDataset(BulkReviewDto dto, int parentDatasetId)
+        {
+            Console.WriteLine("===== PUSH USING LABEL FROM PAYLOAD =====");
+
+            var itemIds = dto.Items.Keys.ToList();
+
+            var originalItems = await _context.DataItems
+                .Where(d => itemIds.Contains(d.ItemId))
+                .ToDictionaryAsync(d => d.ItemId, d => d);
+
+            foreach (var kv in dto.Items)
+            {
+                var itemId = kv.Key;
+                var review = kv.Value;
+
+                // ❌ skip nếu không approved
+                if (review.Status?.ToLower() != "approved")
+                    continue;
+
+                if (review.LabelId == null)
                 {
-                    var newDataset = new Dataset
+                    Console.WriteLine($"❌ Item {itemId} thiếu labelId");
+                    continue;
+                }
+
+                if (!originalItems.ContainsKey(itemId))
+                    continue;
+
+                var originalItem = originalItems[itemId];
+
+                // 🔥 TÌM DATASET THEO LABEL
+                var dataset = await _context.Datasets
+                    .FirstOrDefaultAsync(d =>
+                        d.LabelId == review.LabelId &&
+                        d.ParentDatasetId != null // optional: đảm bảo là sub dataset
+                    );
+
+                // ❗ fallback nếu chưa có dataset gắn label
+                if (dataset == null)
+                {
+                    Console.WriteLine($"⚠️ Không tìm thấy dataset cho label {review.LabelId} → tạo mới");
+
+                    dataset = new Dataset
                     {
-                        DatasetName = labelName,
-                        ParentDatasetId = parentDataset.DatasetId,
-                        ProjectId = parentDataset.ProjectId,
-                        Status = "Active",
+                        DatasetName = $"Auto_Label_{review.LabelId}",
+                        LabelId = review.LabelId,
+                        ParentDatasetId = parentDatasetId,
+                        ProjectId = 1, // ⚠️ chỉnh lại nếu cần
                         CreatedAt = DateTime.UtcNow
                     };
 
-                    _context.Datasets.Add(newDataset);
-                    await _context.SaveChangesAsync();
-
-                    existingDataset = newDataset;
+                    _context.Datasets.Add(dataset);
+                    await _context.SaveChangesAsync(); // cần để có DatasetId
                 }
 
-                //OPTIONAL: add DataItem vào dataset con
-                var itemIds = group.Select(x => x.ItemId).Distinct().ToList();
+                // 🔍 check duplicate
+                var exists = await _context.DataItems.AnyAsync(d =>
+                    d.FileUrl == originalItem.FileUrl &&
+                    d.DatasetId == dataset.DatasetId
+                );
 
-                var dataItems = await _context.DataItems
-                    .Where(x => itemIds.Contains(x.ItemId))
-                    .ToListAsync();
-
-                foreach (var item in dataItems)
+                if (exists)
                 {
-                    // tránh duplicate
-                    if (!_context.DataItems.Any(x => x.ItemId == item.ItemId && x.DatasetId == existingDataset.DatasetId))
-                    {
-                        var newItem = new DataItem
-                        {
-                            FileUrl = item.FileUrl,
-                            DatasetId = existingDataset.DatasetId
-                        };
-
-                        _context.DataItems.Add(newItem);
-                    }
+                    Console.WriteLine($"⚠️ Exists item {itemId}");
+                    continue;
                 }
+
+                Console.WriteLine($"✅ PUSH item {itemId} → {dataset.DatasetName}");
+
+                _context.DataItems.Add(new DataItem
+                {
+                    DatasetId = dataset.DatasetId,
+                    FileUrl = originalItem.FileUrl,
+                    Status = "Pending",
+                    CreatedAt = DateTime.UtcNow
+                });
             }
 
+            // 🔥 SAVE CUỐI
             await _context.SaveChangesAsync();
         }
-
     }
 }
