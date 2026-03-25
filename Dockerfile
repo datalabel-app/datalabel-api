@@ -19,6 +19,10 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 
+RUN apt-get update && \
+    apt-get install -y curl && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN adduser --disabled-password --gecos '' appuser && \
     chown -R appuser /app
 
@@ -28,8 +32,5 @@ EXPOSE 5000
 
 ENV ASPNETCORE_URLS=http://+:5000
 ENV ASPNETCORE_ENVIRONMENT=Production
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:5000/health || exit 1
 
 ENTRYPOINT ["dotnet", "DataLabeling.API.dll"]

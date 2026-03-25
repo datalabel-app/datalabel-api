@@ -50,6 +50,18 @@ namespace DataLabeling.API.Controllers
             return Ok(response);
         }
 
+        [HttpGet("tree/{projectId}")]
+        public async Task<IActionResult> GetDatasetTree(int projectId)
+        {
+            var datasets = await _context.Datasets
+                .Where(d => d.ProjectId == projectId)
+                .ToListAsync();
+
+            var tree = BuildTree(datasets, null);
+
+            return Ok(tree);
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAllDatasets()
         {
@@ -134,6 +146,21 @@ namespace DataLabeling.API.Controllers
             await _context.SaveChangesAsync();
 
             return Ok("Dataset deleted");
+        }
+
+        private List<DatasetTreeResponse> BuildTree(List<Dataset> all, int? parentId)
+        {
+            return all
+                .Where(d => d.ParentDatasetId == parentId)
+                .Select(d => new DatasetTreeResponse
+                {
+                    DatasetId = d.DatasetId,
+                    DatasetName = d.DatasetName,
+                    Status = d.Status,
+
+                    Children = BuildTree(all, d.DatasetId)
+                })
+                .ToList();
         }
     }
 }
