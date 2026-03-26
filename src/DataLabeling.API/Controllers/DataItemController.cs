@@ -20,6 +20,53 @@ namespace DataLabeling.API.Controllers
             _context = context;
         }
 
+        [HttpGet("dataset/{datasetId}/unassigned")]
+        public async Task<IActionResult> GetUnassignedByDataset(int datasetId)
+        {
+            var items = await _context.DataItems
+                .Where(d => d.DatasetId == datasetId
+                    && !d.TaskDataItems.Any())
+                .OrderBy(d => d.ItemId)
+                .Select(d => new DataItemResponse
+                {
+                    ItemId = d.ItemId,
+                    DatasetId = d.DatasetId,
+                    FileUrl = d.FileUrl,
+                    Status = d.Status,
+                    CreatedAt = d.CreatedAt
+                })
+                .ToListAsync();
+
+            return Ok(items);
+        }
+
+        [HttpGet("dataset/{datasetId}")]
+        public async Task<IActionResult> GetByDataset(int datasetId, int? labelId = null)
+        {
+            var query = _context.DataItems
+                .Where(d => d.DatasetId == datasetId)
+                .AsQueryable();
+
+            if (labelId.HasValue)
+            {
+                query = query.Where(d => d.Annotations.Any(a => a.LabelId == labelId.Value));
+            }
+
+            var items = await query
+                .OrderBy(d => d.ItemId)
+                .Select(d => new DataItemResponse
+                {
+                    ItemId = d.ItemId,
+                    DatasetId = d.DatasetId,
+                    FileUrl = d.FileUrl,
+                    Status = d.Status,
+                    CreatedAt = d.CreatedAt
+                })
+                .ToListAsync();
+
+            return Ok(items);
+        }
+
         [HttpGet]
         public async Task<ActionResult<IEnumerable<DataItemResponse>>> GetAll()
         {
@@ -85,24 +132,6 @@ namespace DataLabeling.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = item.ItemId }, result);
         }
 
-        [HttpGet("dataset/{datasetId}")]
-        public async Task<IActionResult> GetByDataset(int datasetId)
-        {
-            var items = await _context.DataItems
-                .Where(d => d.DatasetId == datasetId)
-                .OrderBy(d => d.ItemId)
-                .Select(d => new DataItemResponse
-                {
-                    ItemId = d.ItemId,
-                    DatasetId = d.DatasetId,
-                    FileUrl = d.FileUrl,
-                    Status = d.Status,
-                    CreatedAt = d.CreatedAt
-                })
-                .ToListAsync();
-
-            return Ok(items);
-        }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
