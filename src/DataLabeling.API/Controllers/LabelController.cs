@@ -71,7 +71,8 @@ namespace DataLabeling.API.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateLabel([FromBody] CreateLabelRequest request)
         {
-            var round = await _context.DatasetRounds.FindAsync(request.RoundId);
+            var round = await _context.DatasetRounds
+                .FirstOrDefaultAsync(r => r.RoundId == request.RoundId);
 
             if (round == null)
                 return BadRequest("Round not found");
@@ -87,13 +88,26 @@ namespace DataLabeling.API.Controllers
             _context.Labels.Add(label);
             await _context.SaveChangesAsync();
 
+            var newDataset = new Dataset
+            {
+                DatasetName = request.LabelName,
+                ProjectId = request.ProjectId,
+                ParentDatasetId = request.ParentDatasetId,
+                Status = "Active",
+                CreatedAt = DateTime.UtcNow,
+                LabelId = label.LabelId
+            };
+
+            _context.Datasets.Add(newDataset);
+            await _context.SaveChangesAsync();
+
+
             var response = new LabelResponse
             {
                 LabelId = label.LabelId,
                 RoundId = label.RoundId,
                 LabelName = label.LabelName,
                 Description = label.Description,
-
             };
 
             return Ok(response);
