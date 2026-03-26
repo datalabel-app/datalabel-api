@@ -44,6 +44,24 @@ namespace DataLabeling.BLL
             return await SendEmailAsync(recipientEmail, fullName, subject, htmlContent, plainTextContent);
         }
 
+        public async Task<bool> SendTaskAssignmentEmailAsync(string recipientEmail, string fullName, int taskId, string datasetName, string roundDescription, string role)
+        {
+            var subject = role == "Annotator" ? "Task mới được giao - Data Labeling" : "Task mới cần review - Data Labeling";
+            var htmlContent = EmailTemplate.GetTaskAssignmentEmail(fullName, taskId, datasetName, roundDescription, role);
+            var plainTextContent = $"Xin chào {fullName},\n\nBạn đã được giao task mới #{taskId} để {(role == "Annotator" ? "gán nhãn" : "review")}.\n\nDataset: {datasetName}\nMô tả: {roundDescription}\n\nVui lòng đăng nhập vào hệ thống để bắt đầu làm việc.";
+
+            return await SendEmailAsync(recipientEmail, fullName, subject, htmlContent, plainTextContent);
+        }
+
+        public async Task<bool> SendTaskRejectedEmailAsync(string recipientEmail, string fullName, int taskId, string datasetName, string roundDescription, int rejectedCount)
+        {
+            var subject = "Task bị reject - Data Labeling";
+            var htmlContent = EmailTemplate.GetTaskRejectedEmail(fullName, taskId, datasetName, roundDescription, rejectedCount);
+            var plainTextContent = $"Xin chào {fullName},\n\nTask #{taskId} của bạn đã được review và có {rejectedCount} item bị reject.\n\nDataset: {datasetName}\nMô tả: {roundDescription}\n\nVui lòng đăng nhập vào hệ thống để xem chi tiết và làm lại.";
+
+            return await SendEmailAsync(recipientEmail, fullName, subject, htmlContent, plainTextContent);
+        }
+
         public async Task<bool> SendTaskReadyForReviewEmailAsync(string recipientEmail, string fullName, int taskId, string datasetName, string roundDescription)
         {
             var subject = "Task sẵn sàng để review - Data Labeling";
