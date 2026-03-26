@@ -110,7 +110,7 @@ namespace DataLabeling.DAL.Data
                 entity.HasOne(e => e.ParentDataset)
                     .WithMany(d => d.SubDatasets)
                     .HasForeignKey(e => e.ParentDatasetId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // -----------------------

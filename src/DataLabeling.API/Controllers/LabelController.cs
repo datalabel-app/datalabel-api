@@ -1,4 +1,4 @@
-﻿using DataLabeling.API.DTOs;
+using DataLabeling.API.DTOs;
 using DataLabeling.DAL.Data;
 using DataLabeling.DTOs;
 using DataLabeling.Entities;
@@ -233,7 +233,10 @@ namespace DataLabeling.API.Controllers
         [HttpPut("{id}/approve")]
         public async Task<IActionResult> ApproveLabel(int id)
         {
-            var label = await _context.Labels.FindAsync(id);
+            var label = await _context.Labels
+                .Include(l => l.Round)
+                    .ThenInclude(r => r.Dataset)
+                .FirstOrDefaultAsync(l => l.LabelId == id);
 
             if (label == null)
             {
@@ -249,10 +252,30 @@ namespace DataLabeling.API.Controllers
 
             await _context.SaveChangesAsync();
 
+            var newDataset = new Dataset
+            {
+                DatasetName = label.LabelName,
+                ProjectId = label.Round.Dataset.ProjectId,
+                ParentDatasetId = label.Round.DatasetId,
+                Status = "Active",
+                CreatedAt = DateTime.UtcNow,
+                LabelId = label.LabelId
+            };
+
+            _context.Datasets.Add(newDataset);
+            await _context.SaveChangesAsync();
+
             return Ok(new
             {
                 message = "Label approved successfully",
-                data = label
+                data = new
+                {
+                    label.LabelId,
+                    label.LabelName,
+                    label.Description,
+                    label.LabelStatus,
+                    label.RoundId
+                }
             });
         }
 

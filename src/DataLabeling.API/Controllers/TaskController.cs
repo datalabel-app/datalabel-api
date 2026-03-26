@@ -738,9 +738,12 @@ namespace DataLabeling.API.Controllers
 
                 Console.WriteLine($"✅ PUSH item {itemId} → {dataset.DatasetName}");
 
+                var originalItemIdToUse = originalItem.OriginalItemId ?? originalItem.ItemId;
+
                 _context.DataItems.Add(new DataItem
                 {
                     DatasetId = dataset.DatasetId,
+                    OriginalItemId = originalItemIdToUse,
                     FileUrl = originalItem.FileUrl,
                     Status = "Pending",
                     CreatedAt = DateTime.UtcNow
