@@ -11,7 +11,7 @@
         public DataLabeling.Entities.TaskStatus? Status { get; set; }
 
         public string? ReviewerName { get; set; }
-
+        public string? DatasetName { get; set; }
         public int DataItemCount { get; set; }
 
         public int ShapeType { get; set; }
