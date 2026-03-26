@@ -39,7 +39,11 @@ namespace DataLabeling.API.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateRound([FromBody] CreateRoundRequest request)
         {
-            var dataset = await _context.Datasets.FindAsync(request.DatasetId);
+            Console.WriteLine($"👉 Request DatasetId: {request.DatasetId}");
+
+            var dataset = await _context.Datasets
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.DatasetId == request.DatasetId);
 
             if (dataset == null)
                 return BadRequest("Dataset not found");
@@ -54,21 +58,57 @@ namespace DataLabeling.API.Controllers
                 CreatedAt = DateTime.UtcNow
             };
 
+            Console.WriteLine($"👉 Before Save: {round.DatasetId}");
+
             _context.DatasetRounds.Add(round);
             await _context.SaveChangesAsync();
 
-            var response = new DatasetRoundResponse
-            {
-                RoundId = round.RoundId,
-                DatasetId = round.DatasetId,
-                RoundNumber = round.RoundNumber,
-                Description = round.Description,
-                ShapeType = round.ShapeType,
-                Status = round.Status,
-                CreatedAt = round.CreatedAt
-            };
+            Console.WriteLine($"👉 After Save: {round.DatasetId}");
 
-            return Ok(response);
+            return Ok(new
+            {
+                round.RoundId,
+                round.DatasetId
+            });
+        }
+
+
+        [HttpGet("dataset/{datasetId}")]
+        public async Task<IActionResult> GetRoundsWithLeafLabels(int datasetId)
+        {
+            var datasetIds = await GetSubtreeDatasetIds(datasetId);
+
+            var labels = await _context.Datasets
+                .Where(d =>
+                    datasetIds.Contains(d.DatasetId) &&
+                    d.LabelId != null &&
+                    !_context.Datasets.Any(child => child.ParentDatasetId == d.DatasetId)
+                )
+                .Select(d => new LabelResponse
+                {
+                    DatasetId = d.DatasetId,
+                    LabelId = d.LabelId,
+                    LabelName = d.Label!.LabelName
+                })
+                .ToListAsync();
+
+            var rounds = await _context.DatasetRounds
+                .Where(r => r.DatasetId == datasetId)
+                .OrderBy(r => r.RoundNumber)
+                .Select(r => new DatasetRoundResponse
+                {
+                    RoundId = r.RoundId,
+                    DatasetId = r.DatasetId,
+                    RoundNumber = r.RoundNumber,
+                    Description = r.Description,
+                    Status = r.Status,
+                    CreatedAt = r.CreatedAt,
+
+                    Labels = labels
+                })
+                .ToListAsync();
+
+            return Ok(rounds);
         }
 
 
@@ -93,16 +133,16 @@ namespace DataLabeling.API.Controllers
 
 
 
-        [HttpGet("dataset/{datasetId}")]
-        public async Task<IActionResult> GetRoundsByDataset(int datasetId)
-        {
-            var rounds = await _context.DatasetRounds
-                .Where(r => r.DatasetId == datasetId)
-                .OrderBy(r => r.RoundNumber)
-                .ToListAsync();
+        //[HttpGet("dataset/{datasetId}")]
+        //public async Task<IActionResult> GetRoundsByDataset(int datasetId)
+        //{
+        //    var rounds = await _context.DatasetRounds
+        //        .Where(r => r.DatasetId == datasetId)
+        //        .OrderBy(r => r.RoundNumber)
+        //        .ToListAsync();
 
-            return Ok(rounds);
-        }
+        //    return Ok(rounds);
+        //}
 
 
 
@@ -155,6 +195,23 @@ namespace DataLabeling.API.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(round);
+        }
+
+        private async Task<List<int>> GetSubtreeDatasetIds(int datasetId)
+        {
+            var result = new List<int> { datasetId };
+
+            var children = await _context.Datasets
+                .Where(d => d.ParentDatasetId == datasetId)
+                .ToListAsync();
+
+            foreach (var child in children)
+            {
+                var sub = await GetSubtreeDatasetIds(child.DatasetId);
+                result.AddRange(sub);
+            }
+
+            return result;
         }
 
 
