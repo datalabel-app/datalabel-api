@@ -6,6 +6,8 @@
         public string DatasetName { get; set; }
         public string Status { get; set; }
 
+        public int? ParentDatasetId { get; set; }
+
         public ProjectDto Project { get; set; }
     }
 }

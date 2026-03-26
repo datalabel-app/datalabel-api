@@ -45,6 +45,9 @@ namespace DataLabeling.DAL.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("file_url");
 
+                    b.Property<int?>("OriginalItemId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)

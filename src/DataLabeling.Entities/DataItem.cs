@@ -8,6 +8,8 @@ public class DataItem
 
     public int DatasetId { get; set; }
 
+    public int? OriginalItemId { get; set; }
+
     public string FileUrl { get; set; } = string.Empty;
 
     public string Status { get; set; } = "Pending";
@@ -21,6 +23,7 @@ public class DataItem
     public ICollection<Annotation> Annotations { get; set; } = new List<Annotation>();
 
     public ICollection<TaskErrorHistory> ErrorHistories { get; set; } = new List<TaskErrorHistory>();
+
 
 
 }

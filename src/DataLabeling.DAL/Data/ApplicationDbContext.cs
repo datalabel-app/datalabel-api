@@ -1,5 +1,5 @@
-﻿using DataLabeling.Entities;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using DataLabeling.Entities;
 
 namespace DataLabeling.DAL.Data
 {
@@ -98,7 +98,7 @@ namespace DataLabeling.DAL.Data
                     .IsRequired(false);
 
                 entity.HasOne(e => e.Label)
-                    .WithMany()
+                    .WithMany() 
                     .HasForeignKey(e => e.LabelId)
                     .OnDelete(DeleteBehavior.SetNull);
 
@@ -175,7 +175,7 @@ namespace DataLabeling.DAL.Data
                       .HasForeignKey(d => d.DatasetId)
                       .OnDelete(DeleteBehavior.Cascade);
 
-
+               
             });
 
             // -----------------------
