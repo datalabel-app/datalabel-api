@@ -147,10 +147,11 @@ using (var scope = app.Services.CreateScope())
 }
 
 // MIDDLEWARE
+app.UseForwardedHeaders();
+
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseForwardedHeaders();
 
 app.UseCors("AllowFrontend");
 

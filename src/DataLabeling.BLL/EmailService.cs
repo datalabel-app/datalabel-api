@@ -44,6 +44,15 @@ namespace DataLabeling.BLL
             return await SendEmailAsync(recipientEmail, fullName, subject, htmlContent, plainTextContent);
         }
 
+        public async Task<bool> SendTaskReadyForReviewEmailAsync(string recipientEmail, string fullName, int taskId, string datasetName, string roundDescription)
+        {
+            var subject = "Task sẵn sàng để review - Data Labeling";
+            var htmlContent = EmailTemplate.GetTaskReadyForReviewEmail(fullName, taskId, datasetName, roundDescription);
+            var plainTextContent = $"Xin chào {fullName},\n\nTask #{taskId} đã được annotate xong và sẵn sàng để bạn review.\n\nDataset: {datasetName}\nMô tả: {roundDescription}\n\nVui lòng đăng nhập vào hệ thống để bắt đầu review.";
+
+            return await SendEmailAsync(recipientEmail, fullName, subject, htmlContent, plainTextContent);
+        }
+
         public async Task<bool> SendEmailAsync(string recipientEmail, string recipientName, string subject, string htmlContent, string plainTextContent)
         {
             try
