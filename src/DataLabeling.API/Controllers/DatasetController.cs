@@ -49,17 +49,88 @@ namespace DataLabeling.API.Controllers
 
             return Ok(response);
         }
+        [HttpGet("{datasetId}/labels")]
+        public async Task<IActionResult> GetLabelsFromRoot(int datasetId)
+        {
+            var root = await GetRootDataset(datasetId);
+
+            var allChildIds = await GetAllChildDatasetIds(root.DatasetId);
+
+            allChildIds.Add(root.DatasetId);
+
+            var labels = await _context.Datasets
+                .Where(d => allChildIds.Contains(d.DatasetId) && d.LabelId != null)
+                .Select(d => new
+                {
+                    d.DatasetId,
+                    d.LabelId,
+                    d.Label!.LabelName
+                })
+                .Distinct()
+                .ToListAsync();
+
+            return Ok(labels);
+        }
 
         [HttpGet("tree/{projectId}")]
         public async Task<IActionResult> GetDatasetTree(int projectId)
         {
             var datasets = await _context.Datasets
+                   .Include(d => d.Rounds)
                 .Where(d => d.ProjectId == projectId)
+
                 .ToListAsync();
 
             var tree = BuildTree(datasets, null);
 
             return Ok(tree);
+        }
+
+        [HttpGet("export/{datasetId}")]
+        public async Task<IActionResult> ExportDataset(int datasetId)
+        {
+            var dataset = await _context.Datasets.FindAsync(datasetId);
+            if (dataset == null)
+                return NotFound("Dataset not found");
+
+            var allDatasetIds = new List<int> { datasetId };
+            var subDatasets = await GetAllSubDatasets(datasetId);
+            allDatasetIds.AddRange(subDatasets.Select(d => d.DatasetId));
+
+            var dataItems = await _context.DataItems
+                .Where(di => allDatasetIds.Contains(di.DatasetId))
+                .ToListAsync();
+
+            if (!dataItems.Any())
+                return Ok(new List<object>());
+
+            var itemIds = dataItems.Select(di => di.ItemId).ToList();
+
+            var annotations = await _context.Annotations
+                .Where(a => itemIds.Contains(a.ItemId))
+                .Include(a => a.Label)
+                .ToListAsync();
+
+            var groupedByOriginalItem = dataItems
+                .Where(di => di.Status == "Annotated")
+                .GroupBy(di => di.OriginalItemId ?? di.ItemId)
+                .Select(g => new
+                {
+                    FileUrl = g.First().FileUrl,
+                    Annotations = annotations
+                        .Where(a => g.Select(di => di.ItemId).Contains(a.ItemId))
+                        .Select(a => new
+                        {
+                            Label = a.Label.LabelName,
+                            ShapeType = a.ShapeType,
+                            Coordinates = a.Coordinates,
+                        })
+                        .Distinct()
+                        .ToList()
+                })
+                .ToList();
+
+            return Ok(groupedByOriginalItem);
         }
 
         [HttpGet]
@@ -90,7 +161,7 @@ namespace DataLabeling.API.Controllers
             {
                 DatasetId = dataset.DatasetId,
                 DatasetName = dataset.DatasetName,
-
+                ParentDatasetId = dataset.ParentDatasetId,
                 Status = dataset.Status,
 
                 Project = new ProjectDto
@@ -98,6 +169,10 @@ namespace DataLabeling.API.Controllers
                     ProjectId = dataset.Project.ProjectId,
                     ProjectName = dataset.Project.ProjectName
                 },
+
+
+
+
             };
 
             return Ok(result);
@@ -142,7 +217,17 @@ namespace DataLabeling.API.Controllers
             if (dataset == null)
                 return NotFound("Dataset not found");
 
+            var childDatasets = await _context.Datasets
+                .Where(d => d.ParentDatasetId == id)
+                .ToListAsync();
+
+            _context.Datasets.RemoveRange(childDatasets);
+
+            _context.DataItems.RemoveRange(dataset.DataItems);
+            _context.DatasetRounds.RemoveRange(dataset.Rounds);
+
             _context.Datasets.Remove(dataset);
+
             await _context.SaveChangesAsync();
 
             return Ok("Dataset deleted");
@@ -151,16 +236,81 @@ namespace DataLabeling.API.Controllers
         private List<DatasetTreeResponse> BuildTree(List<Dataset> all, int? parentId)
         {
             return all
+
                 .Where(d => d.ParentDatasetId == parentId)
+
                 .Select(d => new DatasetTreeResponse
                 {
                     DatasetId = d.DatasetId,
                     DatasetName = d.DatasetName,
                     Status = d.Status,
 
+                    ShapeType = d.Rounds
+
+                    .Select(r => (int?)r.ShapeType)
+                    .FirstOrDefault(),
+
                     Children = BuildTree(all, d.DatasetId)
                 })
                 .ToList();
+        }
+
+        private async Task<Dataset> GetRootDataset(int datasetId)
+        {
+            var dataset = await _context.Datasets
+                .FirstAsync(d => d.DatasetId == datasetId);
+
+            while (dataset.ParentDatasetId != null)
+            {
+                dataset = await _context.Datasets
+                    .FirstAsync(d => d.DatasetId == dataset.ParentDatasetId);
+            }
+
+            return dataset;
+        }
+
+        private async Task<List<int>> GetAllChildDatasetIds(int rootId)
+        {
+            var result = new List<int>();
+            var queue = new Queue<int>();
+
+            queue.Enqueue(rootId);
+
+            while (queue.Any())
+            {
+                var currentId = queue.Dequeue();
+
+                var children = await _context.Datasets
+                    .Where(d => d.ParentDatasetId == currentId)
+                    .Select(d => d.DatasetId)
+                    .ToListAsync();
+
+                foreach (var child in children)
+                {
+                    result.Add(child);
+                    queue.Enqueue(child);
+                }
+            }
+
+            return result;
+        }
+
+        private async Task<List<Dataset>> GetAllSubDatasets(int parentId)
+        {
+            var result = new List<Dataset>();
+
+            var children = await _context.Datasets
+                .Where(d => d.ParentDatasetId == parentId)
+                .ToListAsync();
+
+            foreach (var child in children)
+            {
+                result.Add(child);
+                var subChildren = await GetAllSubDatasets(child.DatasetId);
+                result.AddRange(subChildren);
+            }
+
+            return result;
         }
     }
 }
