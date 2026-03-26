@@ -271,5 +271,113 @@ namespace DataLabeling.BLL
 </body>
 </html>";
         }
+        public static string GetTaskReadyForReviewEmail(string fullName, int taskId, string datasetName, string roundDescription)
+        {
+            return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }}
+        .container {{
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }}
+        .header {{
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }}
+        .header h1 {{
+            margin: 0;
+            font-size: 24px;
+        }}
+        .content {{
+            padding: 30px 40px;
+        }}
+        .task-info {{
+            background-color: #f8f9fa;
+            border-left: 4px solid #22c55e;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }}
+        .task-info-item {{
+            margin: 10px 0;
+        }}
+        .task-info-label {{
+            font-weight: bold;
+            color: #555;
+            display: inline-block;
+            width: 120px;
+        }}
+        .task-info-value {{
+            color: #333;
+        }}
+        .footer {{
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>✅ Task Sẵn Sàng Để Review</h1>
+        </div>
+        
+        <div class=""content"">
+            <p>Xin chào <strong>{fullName}</strong>,</p>
+            
+            <p>Task đã được annotate xong và sẵn sàng để bạn review. Dưới đây là thông tin chi tiết:</p>
+            
+            <div class=""task-info"">
+                <div class=""task-info-item"">
+                    <span class=""task-info-label"">Task ID:</span>
+                    <span class=""task-info-value"">#{taskId}</span>
+                </div>
+                <div class=""task-info-item"">
+                    <span class=""task-info-label"">Dataset:</span>
+                    <span class=""task-info-value"">{datasetName}</span>
+                </div>
+                <div class=""task-info-item"">
+                    <span class=""task-info-label"">Mô tả:</span>
+                    <span class=""task-info-value"">{roundDescription}</span>
+                </div>
+            </div>
+            
+            <p>Vui lòng đăng nhập vào hệ thống để bắt đầu review task này.</p>
+            
+            <p style=""margin-top: 30px;"">
+                Trân trọng,<br>
+                <strong>Data Labeling Team</strong>
+            </p>
+        </div>
+        
+        <div class=""footer"">
+            <p>Email này được gửi tự động, vui lòng không trả lời.</p>
+            <p>&copy; 2026 Data Labeling System. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>";
+        }
     }
 }
