@@ -1,4 +1,4 @@
-﻿using DataLabeling.API.DTOs;
+using DataLabeling.API.DTOs;
 using DataLabeling.API.Hubs;
 using DataLabeling.BLL;
 using DataLabeling.DAL.Data;

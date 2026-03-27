@@ -1,4 +1,4 @@
-﻿using DataLabeling.API.DTOs;
+using DataLabeling.API.DTOs;
 using DataLabeling.API.Hubs;
 using DataLabeling.BLL;
 using DataLabeling.DAL.Data;
@@ -136,6 +136,11 @@ public class AnnotationController : ControllerBase
             .Where(a => annotationIds.Contains(a.AnnotationId))
             .ToListAsync();
 
+        var itemIds = annotations.Select(a => a.ItemId).Distinct().ToList();
+        var dataItems = await _context.DataItems
+            .Where(x => itemIds.Contains(x.ItemId))
+            .ToListAsync();
+
         foreach (var item in request.Items)
         {
             var annotation = annotations
@@ -146,6 +151,11 @@ public class AnnotationController : ControllerBase
             annotation.LabelId = item.LabelId;
             annotation.Classification = item.Classification;
 
+            var dataItem = dataItems.FirstOrDefault(x => x.ItemId == annotation.ItemId);
+            if (dataItem != null)
+            {
+                dataItem.Status = "Annotated";
+            }
         }
         task.Status = DataLabeling.Entities.TaskStatus.Annotating;
         task.AnnotatedAt = DateTime.UtcNow;
@@ -240,6 +250,8 @@ public class AnnotationController : ControllerBase
         };
 
         _context.Annotations.Add(annotation);
+
+        dataItem.Status = "Annotated";
 
         task.Status = DataLabeling.Entities.TaskStatus.Annotating;
         task.AnnotatedAt = DateTime.UtcNow;
@@ -394,8 +406,25 @@ public class AnnotationController : ControllerBase
         if (annotation == null)
             return NotFound();
 
+        var itemId = annotation.ItemId;
+
         _context.Annotations.Remove(annotation);
         await _context.SaveChangesAsync();
+
+        var remainingAnnotations = await _context.Annotations
+            .AnyAsync(a => a.ItemId == itemId);
+
+        if (!remainingAnnotations)
+        {
+            var dataItem = await _context.DataItems
+                .FirstOrDefaultAsync(x => x.ItemId == itemId);
+
+            if (dataItem != null)
+            {
+                dataItem.Status = "Pending";
+                await _context.SaveChangesAsync();
+            }
+        }
 
         return NoContent();
     }

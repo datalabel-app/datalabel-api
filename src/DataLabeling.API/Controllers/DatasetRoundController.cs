@@ -1,4 +1,4 @@
-﻿using DataLabeling.API.DTOs;
+using DataLabeling.API.DTOs;
 using DataLabeling.DAL;
 using DataLabeling.DAL.Data;
 using DataLabeling.Entities;
@@ -76,39 +76,36 @@ namespace DataLabeling.API.Controllers
         [HttpGet("dataset/{datasetId}")]
         public async Task<IActionResult> GetRoundsWithLeafLabels(int datasetId)
         {
-            var datasetIds = await GetSubtreeDatasetIds(datasetId);
-
-            var labels = await _context.Datasets
-                .Where(d =>
-                    datasetIds.Contains(d.DatasetId) &&
-                    d.LabelId != null &&
-                    !_context.Datasets.Any(child => child.ParentDatasetId == d.DatasetId)
-                )
-                .Select(d => new LabelResponse
-                {
-                    DatasetId = d.DatasetId,
-                    LabelId = d.LabelId,
-                    LabelName = d.Label!.LabelName
-                })
-                .ToListAsync();
-
             var rounds = await _context.DatasetRounds
                 .Where(r => r.DatasetId == datasetId)
+                .Include(r => r.Labels)
                 .OrderBy(r => r.RoundNumber)
-                .Select(r => new DatasetRoundResponse
-                {
-                    RoundId = r.RoundId,
-                    DatasetId = r.DatasetId,
-                    RoundNumber = r.RoundNumber,
-                    Description = r.Description,
-                    Status = r.Status,
-                    CreatedAt = r.CreatedAt,
-
-                    Labels = labels
-                })
                 .ToListAsync();
 
-            return Ok(rounds);
+            var response = rounds.Select(r => new DatasetRoundResponse
+            {
+                RoundId = r.RoundId,
+                DatasetId = r.DatasetId,
+                RoundNumber = r.RoundNumber,
+                Description = r.Description,
+                Status = r.Status,
+                CreatedAt = r.CreatedAt,
+                ShapeType = r.ShapeType,
+
+                Labels = r.Labels.Select(l => new LabelResponse
+                {
+                    DatasetId = _context.Datasets
+                        .Where(d => d.LabelId == l.LabelId)
+                        .Select(d => (int?)d.DatasetId)
+                        .FirstOrDefault(),
+                    LabelId = l.LabelId,
+                    RoundId = l.RoundId,
+                    LabelName = l.LabelName,
+                    Description = l.Description
+                }).ToList()
+            }).ToList();
+
+            return Ok(response);
         }
 
 
