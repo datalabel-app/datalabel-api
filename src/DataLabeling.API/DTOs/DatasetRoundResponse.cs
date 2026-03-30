@@ -17,5 +17,7 @@ namespace DataLabeling.API.DTOs
         public DateTime CreatedAt { get; set; }
 
         public ShapeType ShapeType { get; set; } = ShapeType.Bbox;
+
+        public List<LabelResponse>? Labels { get; set; }
     }
 }

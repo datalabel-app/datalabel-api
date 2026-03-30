@@ -10,6 +10,8 @@ namespace DataLabeling.Entities
 
         public int? ParentDatasetId { get; set; }
 
+        public int? LabelId { get; set; }
+
         public int ProjectId { get; set; }
 
         public string DatasetName { get; set; } = string.Empty;
@@ -20,6 +22,11 @@ namespace DataLabeling.Entities
 
         [ForeignKey("ParentDatasetId")]
         public Dataset? ParentDataset { get; set; }
+
+
+
+        [ForeignKey("LabelId")]
+        public Label? Label { get; set; }
         public ICollection<Dataset> SubDatasets { get; set; } = new List<Dataset>();
 
         public Project Project { get; set; } = null!;

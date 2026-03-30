@@ -1,9 +1,12 @@
-﻿using DataLabeling.API.DTOs;
+using DataLabeling.API.DTOs;
+using DataLabeling.API.Hubs;
+using DataLabeling.BLL;
 using DataLabeling.DAL.Data;
 using DataLabeling.DTOs.Annotations;
 using DataLabeling.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
@@ -13,10 +16,14 @@ using System.Security.Claims;
 public class AnnotationController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly IHubContext<NotificationHub> _hub;
+    private readonly EmailService _emailService;
 
-    public AnnotationController(ApplicationDbContext context)
+    public AnnotationController(ApplicationDbContext context, IHubContext<NotificationHub> hub, EmailService emailService)
     {
         _context = context;
+        _hub = hub;
+        _emailService = emailService;
     }
 
 
@@ -72,6 +79,42 @@ public class AnnotationController : ControllerBase
 
         await _context.SaveChangesAsync();
 
+        var totalTaskItems = await _context.TaskDataItems
+            .CountAsync(x => x.TaskId == dto.TaskId);
+        var annotatedItems = await _context.Annotations
+            .Where(x => x.TaskId == dto.TaskId)
+            .Select(x => x.ItemId)
+            .Distinct()
+            .CountAsync();
+
+        if (annotatedItems >= totalTaskItems && task.ReviewerId != null)
+        {
+            await _hub.Clients
+                .Group(task.ReviewerId.ToString())
+                .SendAsync("ReceiveNotification", new
+                {
+                    message = "Task has been annotated and ready for review!",
+                    taskId = task.TaskId,
+                    type = "TASK_READY_FOR_REVIEW"
+                });
+
+            var round = await _context.DatasetRounds
+                .Include(r => r.Dataset)
+                .FirstOrDefaultAsync(r => r.RoundId == dto.RoundId);
+
+            var reviewer = await _context.Users.FindAsync(task.ReviewerId);
+            if (reviewer != null && round != null)
+            {
+                _ = _emailService.SendTaskReadyForReviewEmailAsync(
+                    reviewer.Email,
+                    reviewer.FullName,
+                    task.TaskId,
+                    round.Dataset.DatasetName,
+                    round.Description ?? ""
+                );
+            }
+        }
+
         return Ok(new
         {
             message = "Bulk classification created",
@@ -85,11 +128,17 @@ public class AnnotationController : ControllerBase
     {
         if (request.Items == null || !request.Items.Any())
             return BadRequest("No items to update");
-
+        var task = await _context.Tasks
+           .FirstOrDefaultAsync(x => x.TaskId == request.TaskId);
         var annotationIds = request.Items.Select(i => i.AnnotationId).ToList();
 
         var annotations = await _context.Annotations
             .Where(a => annotationIds.Contains(a.AnnotationId))
+            .ToListAsync();
+
+        var itemIds = annotations.Select(a => a.ItemId).Distinct().ToList();
+        var dataItems = await _context.DataItems
+            .Where(x => itemIds.Contains(x.ItemId))
             .ToListAsync();
 
         foreach (var item in request.Items)
@@ -101,9 +150,52 @@ public class AnnotationController : ControllerBase
 
             annotation.LabelId = item.LabelId;
             annotation.Classification = item.Classification;
-        }
 
+            var dataItem = dataItems.FirstOrDefault(x => x.ItemId == annotation.ItemId);
+            if (dataItem != null)
+            {
+                dataItem.Status = "Annotated";
+            }
+        }
+        task.Status = DataLabeling.Entities.TaskStatus.Annotating;
+        task.AnnotatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
+
+        var totalTaskItems = await _context.TaskDataItems
+            .CountAsync(x => x.TaskId == request.TaskId);
+        var annotatedItems = await _context.Annotations
+            .Where(x => x.TaskId == request.TaskId)
+            .Select(x => x.ItemId)
+            .Distinct()
+            .CountAsync();
+
+        if (annotatedItems >= totalTaskItems && task.ReviewerId != null)
+        {
+            await _hub.Clients
+                .Group(task.ReviewerId.ToString())
+                .SendAsync("ReceiveNotification", new
+                {
+                    message = "Task has been annotated and ready for review!",
+                    taskId = task.TaskId,
+                    type = "TASK_READY_FOR_REVIEW"
+                });
+
+            var round = await _context.DatasetRounds
+                .Include(r => r.Dataset)
+                .FirstOrDefaultAsync(r => r.RoundId == task.RoundId);
+
+            var reviewer = await _context.Users.FindAsync(task.ReviewerId);
+            if (reviewer != null && round != null)
+            {
+                _ = _emailService.SendTaskReadyForReviewEmailAsync(
+                    reviewer.Email,
+                    reviewer.FullName,
+                    task.TaskId,
+                    round.Dataset.DatasetName,
+                    round.Description ?? ""
+                );
+            }
+        }
 
         return Ok(new
         {
@@ -158,6 +250,8 @@ public class AnnotationController : ControllerBase
         };
 
         _context.Annotations.Add(annotation);
+
+        dataItem.Status = "Annotated";
 
         task.Status = DataLabeling.Entities.TaskStatus.Annotating;
         task.AnnotatedAt = DateTime.UtcNow;
@@ -312,8 +406,25 @@ public class AnnotationController : ControllerBase
         if (annotation == null)
             return NotFound();
 
+        var itemId = annotation.ItemId;
+
         _context.Annotations.Remove(annotation);
         await _context.SaveChangesAsync();
+
+        var remainingAnnotations = await _context.Annotations
+            .AnyAsync(a => a.ItemId == itemId);
+
+        if (!remainingAnnotations)
+        {
+            var dataItem = await _context.DataItems
+                .FirstOrDefaultAsync(x => x.ItemId == itemId);
+
+            if (dataItem != null)
+            {
+                dataItem.Status = "Pending";
+                await _context.SaveChangesAsync();
+            }
+        }
 
         return NoContent();
     }

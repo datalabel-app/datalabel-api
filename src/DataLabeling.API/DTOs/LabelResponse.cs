@@ -2,9 +2,11 @@
 {
     public class LabelResponse
     {
-        public int LabelId { get; set; }
+        public int? LabelId { get; set; }
 
         public int RoundId { get; set; }
+
+        public int? DatasetId { get; set; }
 
         public string LabelName { get; set; }
 

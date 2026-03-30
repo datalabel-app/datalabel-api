@@ -1,4 +1,4 @@
-﻿using DataLabeling.API.DTOs;
+using DataLabeling.API.DTOs;
 using DataLabeling.DAL.Data;
 using DataLabeling.DTOs;
 using DataLabeling.Entities;
@@ -71,7 +71,8 @@ namespace DataLabeling.API.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateLabel([FromBody] CreateLabelRequest request)
         {
-            var round = await _context.DatasetRounds.FindAsync(request.RoundId);
+            var round = await _context.DatasetRounds
+                .FirstOrDefaultAsync(r => r.RoundId == request.RoundId);
 
             if (round == null)
                 return BadRequest("Round not found");
@@ -87,13 +88,26 @@ namespace DataLabeling.API.Controllers
             _context.Labels.Add(label);
             await _context.SaveChangesAsync();
 
+            var newDataset = new Dataset
+            {
+                DatasetName = request.LabelName,
+                ProjectId = request.ProjectId,
+                ParentDatasetId = request.ParentDatasetId,
+                Status = "Active",
+                CreatedAt = DateTime.UtcNow,
+                LabelId = label.LabelId
+            };
+
+            _context.Datasets.Add(newDataset);
+            await _context.SaveChangesAsync();
+
+
             var response = new LabelResponse
             {
                 LabelId = label.LabelId,
                 RoundId = label.RoundId,
                 LabelName = label.LabelName,
                 Description = label.Description,
-
             };
 
             return Ok(response);
@@ -219,7 +233,10 @@ namespace DataLabeling.API.Controllers
         [HttpPut("{id}/approve")]
         public async Task<IActionResult> ApproveLabel(int id)
         {
-            var label = await _context.Labels.FindAsync(id);
+            var label = await _context.Labels
+                .Include(l => l.Round)
+                    .ThenInclude(r => r.Dataset)
+                .FirstOrDefaultAsync(l => l.LabelId == id);
 
             if (label == null)
             {
@@ -235,10 +252,30 @@ namespace DataLabeling.API.Controllers
 
             await _context.SaveChangesAsync();
 
+            var newDataset = new Dataset
+            {
+                DatasetName = label.LabelName,
+                ProjectId = label.Round.Dataset.ProjectId,
+                ParentDatasetId = label.Round.DatasetId,
+                Status = "Active",
+                CreatedAt = DateTime.UtcNow,
+                LabelId = label.LabelId
+            };
+
+            _context.Datasets.Add(newDataset);
+            await _context.SaveChangesAsync();
+
             return Ok(new
             {
                 message = "Label approved successfully",
-                data = label
+                data = new
+                {
+                    label.LabelId,
+                    label.LabelName,
+                    label.Description,
+                    label.LabelStatus,
+                    label.RoundId
+                }
             });
         }
 
