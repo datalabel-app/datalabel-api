@@ -15,27 +15,51 @@ namespace DataLabeling.API.Controllers
             _context = context;
         }
 
-      
+
         [HttpGet("dataset/{datasetId}")]
         public async Task<IActionResult> GetErrorsByDataset(int datasetId)
         {
             var errors = await _context.TaskErrorHistories
                 .Include(e => e.DataItem)
                 .Where(e => e.DataItem.DatasetId == datasetId)
+                .OrderByDescending(e => e.CreatedAt)
                 .Select(e => new
                 {
                     e.ErrorId,
                     e.TaskId,
                     e.ItemId,
+                    FileUrl = e.DataItem.FileUrl,
                     e.ErrorMessage,
                     e.ReviewerId,
-                    e.CreatedAt,
-                    fileUrl = e.DataItem.FileUrl
+                    e.CreatedAt
                 })
-                .OrderByDescending(e => e.CreatedAt)
                 .ToListAsync();
 
             return Ok(errors);
+        }
+
+        [HttpGet("dataset/{datasetId}/group-by-item")]
+        public async Task<IActionResult> GetErrorsGroupByItem(int datasetId)
+        {
+            var result = await _context.TaskErrorHistories
+                .Include(e => e.DataItem)
+                .Where(e => e.DataItem.DatasetId == datasetId)
+                .GroupBy(e => new { e.ItemId, e.DataItem.FileUrl })
+                .Select(g => new
+                {
+                    ItemId = g.Key.ItemId,
+                    FileUrl = g.Key.FileUrl,
+                    Errors = g.Select(e => new
+                    {
+                        e.ErrorId,
+                        e.ErrorMessage,
+                        e.ReviewerId,
+                        e.CreatedAt
+                    })
+                })
+                .ToListAsync();
+
+            return Ok(result);
         }
 
 
