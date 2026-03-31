@@ -265,6 +265,42 @@ public class AnnotationController : ControllerBase
 
         await _context.SaveChangesAsync();
 
+        var totalTaskItems = await _context.TaskDataItems
+            .CountAsync(x => x.TaskId == dto.TaskId);
+        var annotatedItems = await _context.Annotations
+            .Where(x => x.TaskId == dto.TaskId)
+            .Select(x => x.ItemId)
+            .Distinct()
+            .CountAsync();
+
+        if (annotatedItems >= totalTaskItems && task.ReviewerId != null)
+        {
+            await _hub.Clients
+                .Group(task.ReviewerId.ToString())
+                .SendAsync("ReceiveNotification", new
+                {
+                    message = "Task has been annotated and ready for review!",
+                    taskId = task.TaskId,
+                    type = "TASK_READY_FOR_REVIEW"
+                });
+
+            var round = await _context.DatasetRounds
+                .Include(r => r.Dataset)
+                .FirstOrDefaultAsync(r => r.RoundId == dto.RoundId);
+
+            var reviewer = await _context.Users.FindAsync(task.ReviewerId);
+            if (reviewer != null && round != null)
+            {
+                _ = _emailService.SendTaskReadyForReviewEmailAsync(
+                    reviewer.Email,
+                    reviewer.FullName,
+                    task.TaskId,
+                    round.Dataset.DatasetName,
+                    round.Description ?? ""
+                );
+            }
+        }
+
         return Ok(new AnnotationResponse
         {
             AnnotationId = annotation.AnnotationId,

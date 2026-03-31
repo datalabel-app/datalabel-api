@@ -1,4 +1,4 @@
-﻿using DataLabeling.API.DTOs;
+using DataLabeling.API.DTOs;
 using DataLabeling.DAL.Data;
 using DataLabeling.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -57,9 +57,15 @@ namespace DataLabeling.API.Controllers
 
             var itemIds = dataItems.Select(di => di.ItemId).ToList();
 
+            var approvedItemIds = await _context.TaskDataItems
+                                .Where(tdi => itemIds.Contains(tdi.DataItemId) && tdi.ReviewStatus == "Approved")
+                                .Select(tdi => tdi.DataItemId)
+                                .Distinct()
+                                .ToListAsync();
+
             // 3️⃣ Lấy tất cả Annotation kèm Label
             var annotations = await _context.Annotations
-                .Where(a => itemIds.Contains(a.ItemId))
+                .Where(a => approvedItemIds.Contains(a.ItemId))
                 .Include(a => a.Label)
                 .ToListAsync();
 

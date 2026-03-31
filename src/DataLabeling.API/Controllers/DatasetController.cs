@@ -72,6 +72,37 @@ namespace DataLabeling.API.Controllers
             return Ok(labels);
         }
 
+        [HttpGet("{datasetId}/overview")]
+        public async Task<IActionResult> GetDatasetOverview(int datasetId)
+        {
+            var data = await _context.DataItems
+                .Where(d => d.DatasetId == datasetId)
+                .Include(d => d.Annotations)
+                    .ThenInclude(a => a.Label)
+                .Include(d => d.Annotations)
+                    .ThenInclude(a => a.Annotator)
+                .ToListAsync();
+
+            var result = data.Select(d => new
+            {
+                ItemId = d.ItemId,
+                FileUrl = d.FileUrl,
+
+                Annotations = d.Annotations.Select(a => new
+                {
+                    AnnotationId = a.AnnotationId,
+                    LabelName = a.Label.LabelName,
+                    ShapeType = a.ShapeType,
+                    Coordinates = a.Coordinates,
+                    Classification = a.Classification,
+                    Annotator = a.Annotator.FullName,
+                    CreatedAt = a.CreatedAt
+                })
+            });
+
+            return Ok(result);
+        }
+
         [HttpGet("tree/{projectId}")]
         public async Task<IActionResult> GetDatasetTree(int projectId)
         {
@@ -110,9 +141,14 @@ namespace DataLabeling.API.Controllers
                 .Where(a => itemIds.Contains(a.ItemId))
                 .Include(a => a.Label)
                 .ToListAsync();
+            var approvedItemIds = await _context.TaskDataItems
+                                .Where(tdi => itemIds.Contains(tdi.DataItemId) && tdi.ReviewStatus == "Approved")
+                                .Select(tdi => tdi.DataItemId)
+                                .Distinct()
+                                .ToListAsync();
 
             var groupedByOriginalItem = dataItems
-                .Where(di => di.Status == "Annotated")
+                .Where(di => di.Status == "Annotated" && approvedItemIds.Contains(di.ItemId))
                 .GroupBy(di => di.OriginalItemId ?? di.ItemId)
                 .Select(g => new
                 {
