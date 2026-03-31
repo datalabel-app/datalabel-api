@@ -29,6 +29,11 @@ namespace DataLabeling.Entities
 
         public DateTime? ReviewedAt { get; set; }
 
+        public DateTime? Deadline { get; set; }
+
+        public bool IsOverdueNotified { get; set; } = false;
+        public DateTime? LastNotifiedAt { get; set; }
+
         public DatasetRound Round { get; set; } = null!;
 
         public User? Annotator { get; set; }

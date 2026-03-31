@@ -39,7 +39,8 @@ public class AnnotationController : ControllerBase
 
         if (task == null)
             return BadRequest("Task not found");
-
+        if (task.Deadline.HasValue && DateTime.UtcNow > task.Deadline.Value)
+            return BadRequest("Task is past deadline");
         var itemIds = dto.Items.Select(x => x.ItemId).ToList();
 
         var dataItems = await _context.DataItems
@@ -219,7 +220,8 @@ public class AnnotationController : ControllerBase
 
         if (task == null)
             return BadRequest("Task not found");
-
+        if (task.Deadline.HasValue && DateTime.UtcNow > task.Deadline.Value)
+            return BadRequest("Task is past deadline");
         if (task.AnnotatorId != annotatorId)
             return Forbid("You are not assigned to this task");
 

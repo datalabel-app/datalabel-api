@@ -43,28 +43,61 @@ namespace DataLabeling.API.Controllers
         [HttpGet("dataset/{datasetId}")]
         public async Task<IActionResult> GetByDataset(int datasetId, int? labelId = null)
         {
-            var query = _context.DataItems
-                .Where(d => d.DatasetId == datasetId)
-                .AsQueryable();
+            // 1️⃣ Lấy tất cả dataset cha + con
+            var allDatasetIds = await GetAllDatasetIdsRecursive(datasetId);
 
-            if (labelId.HasValue)
-            {
-                query = query.Where(d => d.Annotations.Any(a => a.LabelId == labelId.Value));
-            }
-
-            var items = await query
-                .OrderBy(d => d.ItemId)
-                .Select(d => new DataItemResponse
-                {
-                    ItemId = d.ItemId,
-                    DatasetId = d.DatasetId,
-                    FileUrl = d.FileUrl,
-                    Status = d.Status,
-                    CreatedAt = d.CreatedAt
-                })
+            // 2️⃣ Lấy tất cả DataItem trong các dataset này
+            var dataItems = await _context.DataItems
+                .Where(di => allDatasetIds.Contains(di.DatasetId))
+                .OrderBy(di => di.ItemId)
                 .ToListAsync();
 
-            return Ok(items);
+            if (!dataItems.Any())
+                return Ok(new List<object>());
+
+            var itemIds = dataItems.Select(di => di.ItemId).ToList();
+
+            // 3️⃣ Lấy tất cả Annotation kèm Label
+            var annotations = await _context.Annotations
+                .Where(a => itemIds.Contains(a.ItemId))
+                .Include(a => a.Label)
+                .ToListAsync();
+
+            // 4️⃣ Group DataItem theo OriginalItemId (nếu null thì dùng ItemId)
+            var grouped = dataItems
+                .GroupBy(di => di.OriginalItemId ?? di.ItemId)
+                .Select(g =>
+                {
+                    // Tập hợp tất cả label của cha + con
+                    var labelsForGroup = annotations
+                        .Where(a => g.Select(di => di.ItemId).Contains(a.ItemId) && a.Label != null)
+                        .Select(a => a.Label.LabelName)
+                        .Distinct()
+                        .ToList();
+
+                    return new DataItemResponse
+                    {
+                        ItemId = g.Key, // Đây là ItemId cha
+                        DatasetId = g.First().DatasetId,
+                        FileUrl = g.First().FileUrl, // lấy file của cha
+                        Status = g.First().Status,
+                        CreatedAt = g.First().CreatedAt,
+                        LabelCount = labelsForGroup.Count,
+                        Labels = labelsForGroup
+                    };
+                })
+                .ToList();
+
+            // 5️⃣ Filter theo labelId nếu cần
+            if (labelId.HasValue)
+            {
+                grouped = grouped
+                    .Where(di => annotations.Any(a => (dataItems.FirstOrDefault(d => d.ItemId == di.ItemId)?.ItemId ?? 0) == a.ItemId
+                                                       && a.LabelId == labelId.Value))
+                    .ToList();
+            }
+
+            return Ok(grouped);
         }
 
         [HttpGet]
@@ -145,6 +178,41 @@ namespace DataLabeling.API.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        private async Task<List<Dataset>> GetAllSubDatasets(int parentId)
+        {
+            var result = new List<Dataset>();
+
+            var children = await _context.Datasets
+                .Where(d => d.ParentDatasetId == parentId)
+                .ToListAsync();
+
+            foreach (var child in children)
+            {
+                result.Add(child);
+                var subChildren = await GetAllSubDatasets(child.DatasetId);
+                result.AddRange(subChildren);
+            }
+
+            return result;
+        }
+
+        private async Task<List<int>> GetAllDatasetIdsRecursive(int parentId)
+        {
+            var allIds = new List<int> { parentId };
+            var childIds = await _context.Datasets
+                .Where(d => d.ParentDatasetId == parentId)
+                .Select(d => d.DatasetId)
+                .ToListAsync();
+
+            foreach (var childId in childIds)
+            {
+                var subIds = await GetAllDatasetIdsRecursive(childId);
+                allIds.AddRange(subIds);
+            }
+
+            return allIds;
         }
     }
 }

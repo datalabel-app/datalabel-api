@@ -9,6 +9,8 @@ namespace DataLabeling.API.DTOs
         public int? AnnotatorId { get; set; }
         public int? ReviewerId { get; set; }
 
+        public DateTime? Deadline { get; set; }
+
         public List<int> DataItemIds { get; set; } = new();
     }
 }

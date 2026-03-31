@@ -16,6 +16,8 @@ namespace DataLabeling.Entities
 
         public string Password { get; set; }
 
+        public int Points { get; set; } = 0;
+
         public UserRole Role { get; set; }
 
         public string Status { get; set; }

@@ -315,9 +315,23 @@ namespace DataLabeling.DAL.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<DateTime?>("Deadline")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deadline");
+
                     b.Property<string>("DescriptionError")
                         .HasColumnType("text")
                         .HasColumnName("description_error");
+
+                    b.Property<bool>("IsOverdueNotified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_overdue_notified");
+
+                    b.Property<DateTime?>("LastNotifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_notified_at");
 
                     b.Property<DateTime?>("ReviewedAt")
                         .HasColumnType("timestamp with time zone")
@@ -513,6 +527,12 @@ namespace DataLabeling.DAL.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("password");
+
+                    b.Property<int>("Points")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("points");
 
                     b.Property<int>("Role")
                         .HasMaxLength(50)
