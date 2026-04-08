@@ -21,6 +21,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // EMAIL SERVICE
 // =============================
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddHostedService<TaskDeadlineChecker>();
 
 // JWT
 var jwtSettings = builder.Configuration.GetSection("Jwt");

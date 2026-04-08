@@ -167,6 +167,7 @@ namespace DataLabeling.API.Controllers
                 .Where(u => u.UserId == userId)
                 .Select(u => new
                 {
+                    u.Points,
                     u.UserId,
                     u.FullName,
                     u.Email,

@@ -21,5 +21,9 @@ namespace DataLabeling.API.DTOs
         public string Status { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; }
+
+        public int? LabelCount { get; set; }
+
+        public List<string>? Labels { get; set; } = new List<string>();
     }
 }

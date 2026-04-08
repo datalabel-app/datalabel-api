@@ -32,7 +32,10 @@ namespace DataLabeling.API.Controllers
         public async Task<IActionResult> CreateTask([FromBody] CreateTaskRequest dto)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
-
+            if (dto.Deadline.HasValue && dto.Deadline < DateTime.UtcNow)
+            {
+                return BadRequest("The deadline must not be earlier than the current time.");
+            }
             try
             {
                 var task = new DataLabeling.Entities.Task
@@ -41,14 +44,22 @@ namespace DataLabeling.API.Controllers
                     AnnotatorId = dto.AnnotatorId,
                     ReviewerId = dto.ReviewerId,
                     Status = DataLabeling.Entities.TaskStatus.Pending,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    Deadline = dto.Deadline
                 };
-
+                var existingItemIds = await _context.TaskDataItems
+                        .AnyAsync(tdi => dto.DataItemIds.Contains(tdi.DataItemId));
+                if (existingItemIds)
+                {
+                    return BadRequest("Some items already have tasks.");
+                }
                 _context.Tasks.Add(task);
                 await _context.SaveChangesAsync();
 
                 if (dto.DataItemIds.Any())
                 {
+
+
                     var taskDataItems = dto.DataItemIds.Select(id => new TaskDataItem
                     {
                         TaskId = task.TaskId,
@@ -133,6 +144,105 @@ namespace DataLabeling.API.Controllers
                 await transaction.RollbackAsync();
                 return BadRequest(ex.Message);
             }
+        }
+
+        [Authorize]
+        [HttpGet("manager/tasks")]
+        public async Task<IActionResult> GetTasksOfManager()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized("Invalid token");
+
+            var managerId = int.Parse(userIdClaim);
+
+            var tasks = await _context.Tasks
+                .Include(t => t.Annotator)
+                .Include(t => t.Reviewer)
+                .Include(t => t.Round)
+                    .ThenInclude(r => r.Dataset)
+                        .ThenInclude(d => d.Project)
+                .Where(t => t.Round.Dataset.Project.ManagerId == managerId)
+                .OrderByDescending(t => t.CreatedAt)
+                .Select(t => new
+                {
+                    t.TaskId,
+                    t.Status,
+                    t.CreatedAt,
+                    t.AnnotatedAt,
+                    t.ReviewedAt,
+                    t.Deadline,
+
+                    Annotator = t.Annotator != null ? new
+                    {
+                        t.Annotator.UserId,
+                        t.Annotator.FullName
+                    } : null,
+
+                    Reviewer = t.Reviewer != null ? new
+                    {
+                        t.Reviewer.UserId,
+                        t.Reviewer.FullName
+                    } : null,
+
+                    DatasetName = t.Round.Dataset.DatasetName,
+                    ProjectName = t.Round.Dataset.Project.ProjectName
+                })
+                .ToListAsync();
+
+            return Ok(tasks);
+        }
+
+        [HttpPut("{taskId}/deadline")]
+        public async Task<IActionResult> UpdateDeadline(int taskId, [FromBody] UpdateDeadlineDto dto)
+        {
+            var task = await _context.Tasks.FindAsync(taskId);
+
+            if (task == null)
+                return BadRequest("Task not found");
+
+            if (!dto.NewDeadline.HasValue)
+                return BadRequest("Deadline is required");
+
+            if (dto.NewDeadline <= DateTime.UtcNow)
+                return BadRequest("Deadline must be in the future");
+
+            var oldDeadline = task.Deadline;
+
+            if (oldDeadline == dto.NewDeadline)
+                return Ok(new { message = "No changes" });
+
+            task.Deadline = dto.NewDeadline;
+
+            if (oldDeadline.HasValue)
+            {
+                if (task.AnnotatorId != null)
+                {
+                    var annotator = await _context.Users.FindAsync(task.AnnotatorId);
+                    if (annotator != null)
+                    {
+                        annotator.Points -= 10;
+                    }
+                }
+
+                if (task.ReviewerId != null)
+                {
+                    var reviewer = await _context.Users.FindAsync(task.ReviewerId);
+                    if (reviewer != null)
+                    {
+                        reviewer.Points -= 10;
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Deadline updated successfully",
+                newDeadline = task.Deadline
+            });
         }
 
         [HttpGet("{taskId}/review")]
@@ -268,7 +378,7 @@ namespace DataLabeling.API.Controllers
 
             var allApproved = allItems.All(x => x.ReviewStatus == "Approved");
             var hasRejected = allItems.Any(x => x.ReviewStatus == "Rejected");
-
+            var previousStatus = task.Status;
             if (allApproved)
             {
                 task.Status = DataLabeling.Entities.TaskStatus.Done;
@@ -284,8 +394,26 @@ namespace DataLabeling.API.Controllers
                 task.Status = DataLabeling.Entities.TaskStatus.Review;
             }
 
-            await _context.SaveChangesAsync();
 
+            if (previousStatus != DataLabeling.Entities.TaskStatus.Done &&
+     task.Status == DataLabeling.Entities.TaskStatus.Done)
+            {
+                var reviewer = await _context.Users.FindAsync(reviewerId);
+                if (reviewer != null)
+                {
+                    reviewer.Points += 5;
+                }
+
+                if (task.AnnotatorId != null)
+                {
+                    var annotator = await _context.Users.FindAsync(task.AnnotatorId);
+                    if (annotator != null)
+                    {
+                        annotator.Points += 5;
+                    }
+                }
+            }
+            await _context.SaveChangesAsync();
             if (hasRejected && task.AnnotatorId != null)
             {
                 await _hub.Clients
@@ -478,8 +606,8 @@ namespace DataLabeling.API.Controllers
         [Authorize]
         [HttpGet("annotator/me")]
         public async Task<IActionResult> GetMyAnnotatorTasks(
-                    [FromQuery] int? status,
-                    [FromQuery] string? search)
+            [FromQuery] int? status,
+            [FromQuery] string? search)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
@@ -487,6 +615,7 @@ namespace DataLabeling.API.Controllers
                 .Where(t => t.AnnotatorId == userId)
                 .Include(t => t.Round)
                     .ThenInclude(r => r.Dataset)
+                        .ThenInclude(d => d.Project)
                 .Include(t => t.Annotator)
                 .Include(t => t.Reviewer)
                 .Include(t => t.TaskDataItems)
@@ -504,6 +633,7 @@ namespace DataLabeling.API.Controllers
                 query = query.Where(t =>
                     (t.Round.Description != null && t.Round.Description.ToLower().Contains(search)) ||
                     (t.Round.Dataset != null && t.Round.Dataset.DatasetName.ToLower().Contains(search)) ||
+                    (t.Round.Dataset.Project.ProjectName.ToLower().Contains(search)) ||
                     (t.Annotator != null && t.Annotator.FullName.ToLower().Contains(search)) ||
                     (t.Reviewer != null && t.Reviewer.FullName.ToLower().Contains(search))
                 );
@@ -511,20 +641,32 @@ namespace DataLabeling.API.Controllers
 
             var tasks = await query
                 .OrderByDescending(t => t.TaskId)
-                .Select(t => new TaskResponseDto
+                .Select(t => new
                 {
-                    TaskId = t.TaskId,
+                    t.TaskId,
                     RoundName = t.Round.Description,
-                    DatasetName = t.Round.Dataset != null ? t.Round.Dataset.DatasetName : null,
+                    DatasetName = t.Round.Dataset.DatasetName,
+                    ProjectName = t.Round.Dataset.Project.ProjectName,
                     AnnotatorName = t.Annotator != null ? t.Annotator.FullName : null,
                     ReviewerName = t.Reviewer != null ? t.Reviewer.FullName : null,
                     DataItemCount = t.TaskDataItems.Count,
                     ShapeType = (int)t.Round.ShapeType,
                     Status = t.Status,
+                    Deadline = t.Deadline
                 })
                 .ToListAsync();
 
-            return Ok(tasks);
+            var grouped = tasks
+                .GroupBy(t => t.ProjectName)
+                .Select(g => new
+                {
+                    ProjectName = g.Key,
+                    TotalTasks = g.Count(),
+                    Tasks = g.ToList()
+                })
+                .OrderByDescending(g => g.TotalTasks);
+
+            return Ok(grouped);
         }
 
         [Authorize]
@@ -537,6 +679,7 @@ namespace DataLabeling.API.Controllers
                 .Where(t => t.ReviewerId == userId)
                 .Include(t => t.Round)
                     .ThenInclude(r => r.Dataset)
+                        .ThenInclude(d => d.Project)
                 .Include(t => t.Annotator)
                 .Include(t => t.Reviewer)
                 .Include(t => t.TaskDataItems)
@@ -554,6 +697,7 @@ namespace DataLabeling.API.Controllers
                 query = query.Where(t =>
                     (t.Round.Description != null && t.Round.Description.ToLower().Contains(search)) ||
                     (t.Round.Dataset != null && t.Round.Dataset.DatasetName.ToLower().Contains(search)) ||
+                    (t.Round.Dataset.Project.ProjectName.ToLower().Contains(search)) ||
                     (t.Annotator != null && t.Annotator.FullName.ToLower().Contains(search)) ||
                     (t.Reviewer != null && t.Reviewer.FullName.ToLower().Contains(search))
                 );
@@ -561,20 +705,30 @@ namespace DataLabeling.API.Controllers
 
             var tasks = await query
                 .OrderByDescending(t => t.TaskId)
-                .Select(t => new TaskResponseDto
+                .Select(t => new
                 {
-                    TaskId = t.TaskId,
+                    t.TaskId,
                     RoundName = t.Round.Description,
-                    DatasetName = t.Round.Dataset != null ? t.Round.Dataset.DatasetName : null,
+                    DatasetName = t.Round.Dataset.DatasetName,
+                    ProjectName = t.Round.Dataset.Project.ProjectName,
                     AnnotatorName = t.Annotator != null ? t.Annotator.FullName : null,
                     ReviewerName = t.Reviewer != null ? t.Reviewer.FullName : null,
                     DataItemCount = t.TaskDataItems.Count,
                     ShapeType = (int)t.Round.ShapeType,
                     Status = t.Status,
+                    Deadline = t.Deadline
                 })
                 .ToListAsync();
 
-            return Ok(tasks);
+            var grouped = tasks
+                .GroupBy(t => t.ProjectName)
+                .Select(g => new
+                {
+                    ProjectName = g.Key,
+                    Tasks = g.ToList()
+                });
+
+            return Ok(grouped);
         }
 
         private async Task<List<Dataset>> GetAllSubDatasets(int parentId)

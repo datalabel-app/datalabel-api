@@ -42,7 +42,9 @@ namespace DataLabeling.DAL.Data
                 entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50);
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at");
                 entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
-
+                entity.Property(e => e.Points)
+      .HasColumnName("points")
+      .HasDefaultValue(0);
                 entity.HasMany(e => e.Projects)
                       .WithOne(p => p.Manager)
                       .HasForeignKey(p => p.ManagerId)
@@ -98,7 +100,7 @@ namespace DataLabeling.DAL.Data
                     .IsRequired(false);
 
                 entity.HasOne(e => e.Label)
-                    .WithMany() 
+                    .WithMany()
                     .HasForeignKey(e => e.LabelId)
                     .OnDelete(DeleteBehavior.SetNull);
 
@@ -175,7 +177,7 @@ namespace DataLabeling.DAL.Data
                       .HasForeignKey(d => d.DatasetId)
                       .OnDelete(DeleteBehavior.Cascade);
 
-               
+
             });
 
             // -----------------------
@@ -194,6 +196,16 @@ namespace DataLabeling.DAL.Data
                 entity.Property(e => e.AnnotatedAt).HasColumnName("annotated_at");
                 entity.Property(e => e.ReviewedAt).HasColumnName("reviewed_at");
                 entity.Property(e => e.DescriptionError).HasColumnName("description_error");
+                entity.Property(e => e.Deadline)
+      .HasColumnName("deadline");
+
+                entity.Property(e => e.IsOverdueNotified)
+        .HasColumnName("is_overdue_notified")
+        .HasDefaultValue(false);
+
+                entity.Property(e => e.LastNotifiedAt)
+                      .HasColumnName("last_notified_at")
+                      .IsRequired(false);
 
                 entity.HasOne(t => t.Round)
                       .WithMany(r => r.Tasks)
